@@ -1,11 +1,14 @@
 import os
 import aiohttp
+import datetime
+import cv2
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
 from hdrezka import Search
 from telethon import TelegramClient
 from dotenv import load_dotenv, find_dotenv
+from telethon.tl.types import DocumentAttributeVideo
 
 load_dotenv(find_dotenv())
 api_id = os.getenv("API_ID")
@@ -32,17 +35,35 @@ async def download_video(video_url):
                         f.write(chunk)
                 return local_filename
 
+async def duration(video_url):
+    cap = cv2.VideoCapture(video_url)
+
+    # Получите общее количество кадров и кадров в секунду для данного видео
+    frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+    # Вычислите продолжительность видео в секундах
+    seconds = frames / fps
+    video_time = str(datetime.timedelta(seconds=seconds))
+
+    print(f"Продолжительность в секундах: {seconds:.2f}")
+    print(f"Время видео: {video_time}")
+    return video_time
 
 async def send_2_chat(message: types.Message, chat_id: int, video_url: str):
     # Скачивание видео
     video_file = await download_video(video_url)
+    dur = duration(video_url)
     print("Отправляю видео...")
     await message.answer("Отправляю видео...")
+    await message.answer_sticker(sticker="CAACAgEAAxkBAAEL2CBmDr4j3_F20zqwx8FJiWU7Avac1wACLQIAAqcjIUQ9QDDJ7YO0tjQE")
+
     # Отправка видео
     await telethon_client.send_file(
         chat_id,
         video_file,
-        supports_streaming=True
+        supports_streaming=True,
+        attributes=[DocumentAttributeVideo(dur, 320, 320, supports_streaming=True)]
     )
 
     # await bot.send_video(chat_id=chat_id, video=open(video_file, 'rb'))
