@@ -1,7 +1,5 @@
 import os
 import aiohttp
-import datetime
-import cv2
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.utils import executor
@@ -9,6 +7,7 @@ from hdrezka import Search
 from telethon import TelegramClient
 from dotenv import load_dotenv, find_dotenv
 from telethon.tl.types import DocumentAttributeVideo
+from moviepy.editor import VideoFileClip
 
 load_dotenv(find_dotenv())
 api_id = os.getenv("API_ID")
@@ -35,38 +34,54 @@ async def download_video(video_url):
                         f.write(chunk)
                 return local_filename
 
-async def duration(video_url):
-    cap = cv2.VideoCapture(video_url)
 
-    # Получите общее количество кадров и кадров в секунду для данного видео
-    frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
+async def duration(video_file):
+    clip = VideoFileClip(video_file)
+    seconds = clip.duration
+    clip.close()
+    return seconds
 
-    # Вычислите продолжительность видео в секундах
-    seconds = frames / fps
-    video_time = str(datetime.timedelta(seconds=seconds))
 
-    print(f"Продолжительность в секундах: {seconds:.2f}")
-    print(f"Время видео: {video_time}")
-    return video_time
+async def width(video_file):
+    clip = VideoFileClip(video_file)
+    width_clip = clip.w
+    clip.close()
+    return width_clip
+
+
+async def height(video_file):
+    clip = VideoFileClip(video_file)
+    height_clip = clip.h
+    clip.close()
+    return height_clip
+
 
 async def send_2_chat(message: types.Message, chat_id: int, video_url: str):
     # Скачивание видео
     video_file = await download_video(video_url)
-    dur = duration(video_url)
     print("Отправляю видео...")
     await message.answer("Отправляю видео...")
     await message.answer_sticker(sticker="CAACAgEAAxkBAAEL2CBmDr4j3_F20zqwx8FJiWU7Avac1wACLQIAAqcjIUQ9QDDJ7YO0tjQE")
+
+    d = await duration(video_file)
+    w = await width(video_file)
+    h = await height(video_file)
+    print(f'Длительность: {d} секунд')
+    print(f'Ширина: {w} px')
+    print(f'Высота: {h} px\n')
 
     # Отправка видео
     await telethon_client.send_file(
         chat_id,
         video_file,
         supports_streaming=True,
-        attributes=[DocumentAttributeVideo(dur, 320, 320, supports_streaming=True)]
+        attributes=[DocumentAttributeVideo(d, w, h, supports_streaming=True)]
     )
+    try:
+        await message.answer_video(video=open(video_file, 'rb'))
+    except Exception as e:
+        await message.answer(f'Произошла ошибка: {e}')
 
-    # await bot.send_video(chat_id=chat_id, video=open(video_file, 'rb'))
     print("Видео отправлено!")
     await message.answer("Видео отправлено!")
     os.remove(video_file)  # Удаление файла после отправки
@@ -80,9 +95,14 @@ async def start(message: types.Message):
 @dp.message_handler()
 async def main(message: types.Message):
     try:
-        search_results = await Search(message.text).get_page(1)
-        # results = len(search_results)
-        player = await search_results[1].player
+        search_results = await Search(message.text).get_page(0)
+        results = len(search_results)
+        for i in range(results):
+            player = await search_results[i].player
+            if message.text in player.post.name:
+                print(f'Фильм - {player.post.name}')
+                break
+
 
         translator_id = None  # default
         for name, id_ in player.post.translators.name_id.items():
@@ -102,7 +122,7 @@ async def main(message: types.Message):
         video_url = (await video[video.min].last_url).mp4
         chat_id = message.chat.id
 
-        await send_2_chat(message, video_url, chat_id)
+        await send_2_chat(message, chat_id, video_url)
 
     except Exception as e:
         await message.answer(f'Произошла ошибка: {e}')
