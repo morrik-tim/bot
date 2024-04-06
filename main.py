@@ -78,7 +78,7 @@ async def send_2_chat(message: types.Message, chat_id: int, video_url: str):
         attributes=[DocumentAttributeVideo(d, w, h, supports_streaming=True)]
     )
     try:
-        await message.answer_video(video=open(video_file, 'rb'))
+        await message.answer_video(video=open(video_url, 'rb'))
     except Exception as e:
         await message.answer(f'Произошла ошибка: {e}')
 
@@ -99,6 +99,7 @@ async def main(message: types.Message):
         results = len(search_results)
         for i in range(results):
             player = await search_results[i].player
+            print(f'Имя - {player.post.name}')
             if message.text in player.post.name:
                 print(f'Фильм - {player.post.name}')
                 break
@@ -107,22 +108,33 @@ async def main(message: types.Message):
         translator_id = None  # default
         for name, id_ in player.post.translators.name_id.items():
             print(f'Переводчик - {name}, ID: {id_}')
-            if 'субтитры' in name.casefold():
+            if 'Дубляж' in name:
                 translator_id = id_
-            break
+                break
 
         stream = await player.get_stream(translator_id)
         video = stream.video
 
-        await message.answer_photo(search_results[1].poster)
+        # stream = await player.get_stream(1, 1, translator_id)  # raise AJAXFail if invalid episode or translator
+        # video = stream.video
+        # print(await video.last_url)  # best quality (.m3u8)
+        # print((await video[video.min].last_url).mp4, end='\n\n')  # worst quality (.mp4)
+
+        await message.answer_photo(search_results[i].poster)
         await message.answer(player.post.info)
 
-        print((await video.last_url).mp4)
 
-        video_url = (await video[video.min].last_url).mp4
+        for i in range(len(video.qualities)):
+            if video.qualities[i] == 720:
+                video_url = (await video[i].last_url).mp4
+                break
+            print(video.qualities[i])
+            print(i)
+            print((await video[i].last_url).mp4, end='\n\n')
+
         chat_id = message.chat.id
 
-        await send_2_chat(message, chat_id, video_url)
+        # await send_2_chat(message, chat_id, video_url)
 
     except Exception as e:
         await message.answer(f'Произошла ошибка: {e}')
