@@ -1,5 +1,6 @@
 /.env
 /anon.session
 /venv/
+/.venv/
 /.idea/
 /anon.session-journal
