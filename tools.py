@@ -3,15 +3,10 @@ import os
 import aiohttp
 from aiogram import types
 from moviepy.editor import VideoFileClip
-from telethon import TelegramClient
 from telethon.tl.types import DocumentAttributeVideo
 
-api_id = os.getenv("API_ID")
-api_hash = os.getenv("API_HASH")
-phone = os.getenv("PHONE")
+from main import telethon_client
 
-telethon_client = TelegramClient('anon', api_id, api_hash)
-telethon_client.start(phone=phone)
 
 async def duration(video_file):
     clip = VideoFileClip(video_file)
