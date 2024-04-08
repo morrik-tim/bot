@@ -43,10 +43,9 @@ async def main(message: types.Message):
 
 async def process_search_results(query, session, chat_id):
     markup = await get_markup()
-    chat_id_pf = chat_id
     page = 1
     async for film in search_films(query, page):
-        await process_film(film, markup, session, chat_id_pf)
+        await process_film(film, markup, session, chat_id)
 
 
 async def search_films(query, start_page):
@@ -66,13 +65,12 @@ async def search_films(query, start_page):
 
 
 async def process_film(film, markup, session, chat_id):
-    chat_id_pv = chat_id
     player = await film.player
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content = meta_tag['content'].removeprefix('video.')
     logging.info(f'Название - {player.post.name}')
     logging.info(f'Тип контента - {content}')
-    await bot.send_photo(film.poster, player.post.name, reply_markup=markup)
+    await bot.send_photo(chat_id, film.poster, player.post.name, reply_markup=markup)
 
     await asyncio.sleep(2)
 
@@ -80,26 +78,24 @@ async def process_film(film, markup, session, chat_id):
     if translator_id:
         stream = await player.get_stream(translator_id)
         video = stream.video
-        await bot.send_photo(film.poster, reply_markup=markup)
-        await bot.send_message(film.info, reply_markup=markup)
-        await process_video(video, chat_id_pv)
+
+        await process_video(video, chat_id)
 
 
 async def process_video(video, chat_id):
-    chat_id_sv = chat_id
     for i, quality in enumerate(video.qualities):
         if quality == 720:
             video_url = (await video[i].last_url).mp4
             seconds, width_clip, height_clip = await get_video_params(video_url)
-            await send_video(video_url, seconds, width_clip, height_clip, chat_id_sv)
+            await send_video(video_url, seconds, width_clip, height_clip, chat_id)
 
 
 async def get_markup():
     markup = types.InlineKeyboardMarkup()
     markup.row(
         types.InlineKeyboardButton('Назад', callback_data='back'),
-        types.InlineKeyboardButton('Далее', callback_data='next'))
-    markup.add(types.InlineKeyboardButton('Выбрать', callback_data='select'))
+                types.InlineKeyboardButton('Далее', callback_data='next'))
+    markup.row(types.InlineKeyboardButton('Выбрать', callback_data='select'))
     return markup
 
 
@@ -113,7 +109,6 @@ async def get_video_params(video_url):
 
 
 async def send_video(video_url, seconds, width_clip, height_clip, chat_id):
-    chat_id_sf = chat_id
     async with aiohttp.ClientSession() as session:
         async with session.get(video_url) as response:
             # if response.status == 200:
@@ -124,7 +119,7 @@ async def send_video(video_url, seconds, width_clip, height_clip, chat_id):
             #                 break
             #             await f.write(chunk)
                 # await telethon_client.send_file(
-                #     chat_id_sf, video_url.split('/')[-1],
+                #     chat_id, video_url.split('/')[-1],
                 #     supports_streaming=True,
                 #     attributes=[DocumentAttributeVideo(seconds, width_clip, height_clip, supports_streaming=True)]
                 # )
