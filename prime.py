@@ -42,11 +42,8 @@ async def start(message: types.Message):
 @dp.message_handler(content_types=['text'])
 async def main(message: types.Message):
     async with aiohttp.ClientSession():
-        try:
-            markup = await get_markup()
-            await process_search_results(message.text, message.chat.id, markup)
-        except Exception as e:
-            logging.error(f"An error occurred: {e}")
+        markup = await get_markup()
+        await process_search_results(message.text, message.chat.id, markup)
 
 
 @dp.callback_query_handler(lambda query: query.data == 'select')
@@ -79,6 +76,7 @@ async def search_films(query, start_page):
 
 
 async def process_film(film, markup, chat_id):
+    global video
     player = await film.player
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content = meta_tag['content'].removeprefix('video.')
@@ -89,12 +87,24 @@ async def process_film(film, markup, chat_id):
     except Exception as e:
         logging.error(f"An error occurred while sending photo: {e}")
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(1.6)
 
-    translator_id = next((id_ for name, id_ in player.post.translators.name_id.items() if 'Дубляж' in name), None)
-    if translator_id:
-        stream = await player.get_stream(translator_id)
-        await video_queue.put(stream.video)
+    try:
+        translator_id = None  # default
+        for name, id_ in player.post.translators.name_id.items():
+            print(f'Переводчик - {name}, ID: {id_}')
+            if 'Дубляж' in name:
+                translator_id = id_
+                stream = await player.get_stream(translator_id)
+                video = stream.video
+                break
+    except Exception as e:
+        logging.error(f"An error occurred while getting stream: {e}")
+        stream2 = await player.get_stream()
+        video = stream2.video
+
+    await video_queue.put(video)
+
 
 async def process_video(video_pv, chat_id):
     print('процесс')
@@ -109,9 +119,9 @@ async def process_video(video_pv, chat_id):
 
 async def get_markup():
     markup = types.InlineKeyboardMarkup()
-    markup.row(
-        types.InlineKeyboardButton('Назад', callback_data='back'),
-        types.InlineKeyboardButton('Далее', callback_data='next'))
+    # markup.row(
+    #     types.InlineKeyboardButton('Назад', callback_data='back'),
+    #     types.InlineKeyboardButton('Далее', callback_data='next'))
     markup.row(types.InlineKeyboardButton('Выбрать', callback_data='select'))
     return markup
 
@@ -135,19 +145,20 @@ async def send_video(video_url, seconds, width_clip, height_clip, chat_id):
                 with tqdm(total=content_length, unit='B', unit_scale=True, desc=video_url.split('/')[-1]) as pbar:
                     async with aiofiles.open(video_url.split('/')[-1], mode='wb') as f:
                         while True:
-                            chunk = await response.content.read(1048576)
+                            chunk = await response.content.read(8192)
                             if not chunk:
                                 break
                             await f.write(chunk)
                             pbar.update(len(chunk))
-                            # print(f'регресс - {pbar.update(len(chunk))}')
-                            # print(f'прогресс - {pbar}')
+                        pbar.close()
                     await telethon_client.send_file(
                         chat_id, video_url.split('/')[-1],
                         supports_streaming=True,
                         attributes=[DocumentAttributeVideo(seconds, width_clip, height_clip, supports_streaming=True)]
                     )
                     logging.info("Видео отправлено!")
+                    p
+                    os.remove(video_url.split('/')[-1])
             else:
                 logging.error(f"Failed to download video: {response.status}")
 
