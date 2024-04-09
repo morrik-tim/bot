@@ -150,14 +150,14 @@ async def send_video(video_url, seconds, width_clip, height_clip, chat_id):
                                 break
                             await f.write(chunk)
                             pbar.update(len(chunk))
-                        pbar.close()
+                    pbar.close()
                     await telethon_client.send_file(
                         chat_id, video_url.split('/')[-1],
                         supports_streaming=True,
                         attributes=[DocumentAttributeVideo(seconds, width_clip, height_clip, supports_streaming=True)]
                     )
                     logging.info("Видео отправлено!")
-                    p
+
                     os.remove(video_url.split('/')[-1])
             else:
                 logging.error(f"Failed to download video: {response.status}")
