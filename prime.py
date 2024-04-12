@@ -27,6 +27,8 @@ logging.basicConfig(level=logging.INFO)
 telethon_client = TelegramClient('anon', API_ID, API_HASH)
 telethon_client.start(phone=PHONE, password=CLOUD_PASSWORD)
 
+# gitignore /.env
+
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
