@@ -20,10 +20,13 @@ API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
 PHONE = os.getenv("PHONE")
 TOKEN = os.getenv("TOKEN")
+CLOUD_PASSWORD = os.getenv("CLOUD_PASSWORD")
 
 logging.basicConfig(level=logging.INFO)
+
 telethon_client = TelegramClient('anon', API_ID, API_HASH)
-telethon_client.start(phone=PHONE)
+telethon_client.start(phone=PHONE, password=CLOUD_PASSWORD)
+
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
@@ -90,7 +93,6 @@ async def process_film(film, markup, chat_id):
     await asyncio.sleep(1.6)
 
     try:
-        translator_id = None  # default
         for name, id_ in player.post.translators.name_id.items():
             print(f'Переводчик - {name}, ID: {id_}')
             if 'Дубляж' in name:
@@ -119,9 +121,9 @@ async def process_video(video_pv, chat_id):
 
 async def get_markup():
     markup = types.InlineKeyboardMarkup()
-    # markup.row(
-    #     types.InlineKeyboardButton('Назад', callback_data='back'),
-    #     types.InlineKeyboardButton('Далее', callback_data='next'))
+    markup.row(
+        types.InlineKeyboardButton('Назад', callback_data='back'),
+        types.InlineKeyboardButton('Далее', callback_data='next'))
     markup.row(types.InlineKeyboardButton('Выбрать', callback_data='select'))
     return markup
 
