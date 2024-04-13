@@ -24,8 +24,8 @@ CLOUD_PASSWORD = os.getenv("CLOUD_PASSWORD")
 
 logging.basicConfig(level=logging.INFO)
 
-telethon_client = TelegramClient('anon', API_ID, API_HASH)
-telethon_client.start(phone=PHONE, password=CLOUD_PASSWORD)
+# telethon_client = TelegramClient('anon', API_ID, API_HASH)
+# telethon_client.start(phone=PHONE, password=CLOUD_PASSWORD)
 
 # gitignore /.env
 

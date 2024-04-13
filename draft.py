@@ -27,3 +27,27 @@
 #             logging.info("Видео отправлено!")
 #         else:
 #             logging.error(f"Failed to download video: {response.status}")
+
+translator_id = None  # default
+for name, id_ in player.post.translators.name_id.items():
+    print(f'Переводчик - {name}, ID: {id_}')
+    if 'Дубляж' in name:
+        translator_id = id_
+        break
+
+stream = await player.get_stream(translator_id)
+video = stream.video
+
+await message.answer_photo(search_results[film].poster, reply_markup=markup)
+await message.answer(player.post.info, reply_markup=markup)
+
+for i in range(len(video.qualities)):
+    if video.qualities[i] == 720:
+        video_url = (await video[i].last_url).mp4
+        break
+    print(video.qualities[i])
+    print(i)
+    print((await video[i].last_url).mp4, end='\n\n')
+
+seconds, width_clip, height_clip = await get_video_params(video_url)
+await send_video(video_url, seconds, width_clip, height_clip, message.chat.id)
