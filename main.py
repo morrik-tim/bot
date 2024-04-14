@@ -21,26 +21,18 @@ API_HASH = os.getenv("API_HASH")
 PHONE = os.getenv("PHONE")
 TOKEN = os.getenv("TOKEN")
 PASSWORD = os.getenv("PASSWORD")
+USER_AGENT = os.getenv("USER_AGENT")
 
 logging.basicConfig(level=logging.INFO)
-telethon_client = TelegramClient('anon', API_ID, API_HASH)
+telethon_client = TelegramClient('anon', API_ID, API_HASH, user_agent=USER_AGENT)
 telethon_client.start(phone=PHONE, password=PASSWORD)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
-player = None
-search_results = None
-film = None
-page = None
-markup_main = None
-choose_markup = None
-choose_quality = None
-video = None
-translator_id = None
 
-
+# текстовые хэндлеры
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
     await message.answer(f'ID чата {message.chat.id}')
@@ -77,39 +69,37 @@ async def main(message: types.Message):
     choose_markup = await choose_translator_markups()
 
 
+# Хэндлеры кнопок
 @dp.callback_query_handler(lambda query: query.data == 'select')
 async def select_callback_handler(query: types.CallbackQuery):
-    await query.message.delete()
     await bot.send_message(query.message.chat.id, 'Выберите озвучку', reply_markup=choose_markup)
 
 
 @dp.callback_query_handler(lambda query: query.data == 'next')
 async def next_callback_handler(query: types.CallbackQuery):
-    await query.message.delete()
     await next_film(query.message.chat.id)
 
 
 @dp.callback_query_handler(lambda query: query.data == 'back')
 async def back_callback_handler(query: types.CallbackQuery):
-    await query.message.delete()
     await back_film(query.message.chat.id)
 
 
 @dp.callback_query_handler(lambda query: query.data in player.post.translators.name_id.keys())
 async def translator_callback_handler(query: types.CallbackQuery):
-    global translator_id
+    global translator_id, translator_name, choose_quality
     translator_name = query.data
     translator_id = player.post.translators.name_id[translator_name]  # id'shnik
     # Далее вы можете выполнить какие-то действия в зависимости от выбранного переводчика
-    await  process_film()
+    await process_film()
     choose_quality = await choose_quality_markups()
-    await query.message.delete()
     await bot.send_message(query.message.chat.id, f'Выберете качество', reply_markup=choose_quality)
 
 
 @dp.callback_query_handler(lambda query: query.data.isdigit() and int(query.data) < len(video.qualities))
 async def choose_quality_callback_handler(query: types.CallbackQuery):
-    await query.message.delete()
+    global choose_quality, chosen_quality_index, video_url, seconds, width_clip, height_clip
+
     chosen_quality_index = int(query.data)
     chosen_quality = video.qualities[chosen_quality_index]
 
@@ -117,10 +107,12 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
     # Например, отправка сообщения с выбранным качеством
     await query.message.answer(f"Вы выбрали качество: {chosen_quality}")
     video_url = (await video[chosen_quality_index].last_url).mp4
+
     seconds, width_clip, height_clip = await get_video_params(video_url)
     await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
 
 
+# Генерация маркапов
 @dp.message_handler()
 async def main_markups():
     markup = types.InlineKeyboardMarkup()
@@ -148,9 +140,9 @@ async def choose_quality_markups():
     return markup
 
 
+# методы
 async def next_film(chat_id):
-    global film
-    page = 1
+    global film, player
     results = len(search_results)
 
     if film < results - 1:
@@ -167,12 +159,9 @@ async def next_film(chat_id):
     await bot.send_photo(chat_id, search_results[film].poster, player.post.name,
                          reply_markup=markup_main)
 
-    await asyncio.sleep(2)
-
 
 async def back_film(chat_id):
-    global film
-    page = 1
+    global film, player
 
     if film > 0:
         film -= 1
@@ -188,11 +177,9 @@ async def back_film(chat_id):
     await bot.send_photo(chat_id, search_results[film].poster, player.post.name,
                          reply_markup=markup_main)
 
-    await asyncio.sleep(2)
-
 
 async def process_film():
-    global video, translator_id, player
+    global video, player, stream
 
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content = meta_tag['content'].removeprefix('video.')
@@ -202,16 +189,9 @@ async def process_film():
     logging.info(f'Тип контента - {content}')
     logging.info(f'URL фильма - {player.post.url}')
 
-    await asyncio.sleep(1.6)
-
     if content == 'movie':
-        print('видео')
-        if player.post.translators.names in player.post.translators.name_id.items() is not None:
-            stream = await player.get_stream(translator_id)
-            video = stream.video
-        else:
-            stream = await player.get_stream()
-            video = stream.video
+        stream = await player.get_stream(translator_id)
+        video = stream.video
     else:
         print('это сериал пока не работаем с сериалами')
 
@@ -226,9 +206,11 @@ async def get_video_params(video_file):
 
 
 async def send_video(video_url, seconds, width_clip, height_clip, chat_id):
-    async with aiohttp.ClientSession() as session:
+    timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(video_url) as response:
             if response.status == 200:
+                await bot.send_message(chat_id, 'Началась загрузка!')
                 content_length = int(response.headers.get('Content-Length', 0))
                 with tqdm(total=content_length, unit='B', unit_scale=True, desc=video_url.split('/')[-1]) as pbar:
                     async with aiofiles.open(video_url.split('/')[-1], mode='wb') as f:
