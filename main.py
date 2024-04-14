@@ -91,6 +91,7 @@ async def translator_callback_handler(query: types.CallbackQuery):
     global translator_id, translator_name, choose_quality
     translator_name = query.data
     translator_id = player.post.translators.name_id[translator_name]  # id'shnik
+
     # Далее вы можете выполнить какие-то действия в зависимости от выбранного переводчика
     await process_film()
     choose_quality = await choose_quality_markups()
@@ -180,7 +181,7 @@ async def back_film(chat_id):
 
 
 async def process_film():
-    global video, player, stream
+    global video, player, stream, translator_id
 
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content = meta_tag['content'].removeprefix('video.')
@@ -191,8 +192,11 @@ async def process_film():
     logging.info(f'URL фильма - {player.post.url}')
 
     if content == 'movie':
-        stream = await player.get_stream(translator_id)
-        video = stream.video
+        try:
+            stream = player.get_stream(translator_id)
+            video = stream.video
+        except Exception as e:
+            print(f'Ошибка при загрузке стрима: {e}, id: {translator_id}')
     else:
         print('это сериал пока не работаем с сериалами')
 
