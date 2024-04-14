@@ -20,10 +20,11 @@ API_ID = os.getenv("API_ID")
 API_HASH = os.getenv("API_HASH")
 PHONE = os.getenv("PHONE")
 TOKEN = os.getenv("TOKEN")
+PASSWORD = os.getenv("PASSWORD")
 
 logging.basicConfig(level=logging.INFO)
 telethon_client = TelegramClient('anon', API_ID, API_HASH)
-telethon_client.start(phone=PHONE)
+telethon_client.start(phone=PHONE, password=PASSWORD)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
