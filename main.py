@@ -24,7 +24,8 @@ PASSWORD = os.getenv("PASSWORD")
 USER_AGENT = os.getenv("USER_AGENT")
 
 logging.basicConfig(level=logging.INFO)
-telethon_client = TelegramClient('anon', API_ID, API_HASH, user_agent=USER_AGENT)
+telethon_client = TelegramClient('anon', API_ID, API_HASH)
+telethon_client.user_agent = USER_AGENT
 telethon_client.start(phone=PHONE, password=PASSWORD)
 
 bot = Bot(token=TOKEN)
