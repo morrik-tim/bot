@@ -32,15 +32,8 @@ dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
 # Глобальные переменные
-player = None
-search_results = None
-film = 0
-markup_main = None
-choose_markup = None
-page = 1
-translator_id = None
-choose_quality = None
-video = None
+
+
 
 # Текстовые хэндлеры
 @dp.message_handler(commands=['start'])
@@ -197,9 +190,10 @@ async def back_film(chat_id):
 
 
 async def process_film():
-    global video, player, stream
+    global video, stream
 
-    await asyncio.sleep(5)
+    player = await search_results[film].player
+
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content = meta_tag['content'].removeprefix('video.')
 
@@ -211,7 +205,6 @@ async def process_film():
     for name, id_ in player.post.translators.name_id.items():
         logging.info(f'Переводчик - {name}, ID: {id_}')
 
-    await asyncio.sleep(5)
     if content == 'movie':
         try:
             stream = await player.get_stream(translator_id)
