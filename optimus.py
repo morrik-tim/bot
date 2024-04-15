@@ -90,15 +90,15 @@ async def back_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data in player.post.translators.name_id.keys())
 async def translator_callback_handler(query: types.CallbackQuery):
-    global translator_id, choose_quality
+    global translator_id, choose_quality, video
     translator_name = query.data
     translator_id = player.post.translators.name_id[translator_name]  # id'shnik
 
     # Далее вы можете выполнить какие-то действия в зависимости от выбранного переводчика
     await asyncio.sleep(5)
     await process_film()
-
     await asyncio.sleep(5)
+
     if video is not None:
         choose_quality = await choose_quality_markups()
         await bot.send_message(query.message.chat.id, f'Выберете качество', reply_markup=choose_quality)
@@ -108,7 +108,7 @@ async def translator_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data.isdigit() and int(query.data) < len(video.qualities))
 async def choose_quality_callback_handler(query: types.CallbackQuery):
-    global video_url, seconds, width_clip, height_clip
+    global video_url, seconds, width_clip, height_clip, video
 
     print(4)
 
