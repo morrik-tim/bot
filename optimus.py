@@ -218,11 +218,12 @@ async def process_film():
     if content == 'movie':
         try:
             stream = await player.get_stream(translator_id)
-            video = stream.video
+            if stream:  # Проверяем, что stream не равен False
+                video = stream.video
+            else:
+                logging.error("Failed to get stream data")
         except Exception as e:
-            print(f'Ошибка при загрузке стрима: {e}, id: {translator_id}')
-            stream = await player.get_stream()
-            video = stream.video
+            logging.error(f'Ошибка при загрузке стрима: {e}, id: {translator_id}')
     else:
         print('Это сериал, пока не работаем с сериалами')
 
