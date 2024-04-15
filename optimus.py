@@ -24,8 +24,8 @@ PASSWORD = os.getenv("PASSWORD")
 USER_AGENT = os.getenv("USER_AGENT")
 
 logging.basicConfig(level=logging.INFO)
-telethon_client = TelegramClient('anon', API_ID, API_HASH)
-telethon_client.start(phone=PHONE, password=PASSWORD)
+# telethon_client = TelegramClient('anon', API_ID, API_HASH)
+# telethon_client.start(phone=PHONE, password=PASSWORD)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
@@ -103,13 +103,18 @@ async def translator_callback_handler(query: types.CallbackQuery):
 
     # Далее вы можете выполнить какие-то действия в зависимости от выбранного переводчика
     await process_film()
-    choose_quality = await choose_quality_markups()
-    await bot.send_message(query.message.chat.id, f'Выберете качество', reply_markup=choose_quality)
+
+    await asyncio.sleep(2)
+    if video is not None:
+        choose_quality = await choose_quality_markups()
+        await bot.send_message(query.message.chat.id, f'Выберете качество', reply_markup=choose_quality)
 
 
 @dp.callback_query_handler(lambda query: query.data.isdigit() and int(query.data) < len(video.qualities))
 async def choose_quality_callback_handler(query: types.CallbackQuery):
     global video_url, seconds, width_clip, height_clip
+
+    print(4)
 
     chosen_quality_index = int(query.data)
     chosen_quality = video.qualities[chosen_quality_index]
@@ -204,7 +209,7 @@ async def process_film():
     if content == 'movie':
         try:
             stream = await player.get_stream(translator_id)
-            video = await stream.video
+            video = stream.video
         except Exception as e:
             print(f'Ошибка при загрузке стрима: {e}, id: {translator_id}')
     else:
