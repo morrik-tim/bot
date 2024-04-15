@@ -102,6 +102,7 @@ async def translator_callback_handler(query: types.CallbackQuery):
     translator_id = player.post.translators.name_id[translator_name]  # id'shnik
 
     # Далее вы можете выполнить какие-то действия в зависимости от выбранного переводчика
+    await asyncio.sleep(2)
     await process_film()
 
     await asyncio.sleep(2)
@@ -198,6 +199,7 @@ async def back_film(chat_id):
 async def process_film():
     global video, player, stream
 
+    await asyncio.sleep(2)
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content = meta_tag['content'].removeprefix('video.')
 
@@ -206,6 +208,10 @@ async def process_film():
     logging.info(f'Тип контента - {content}')
     logging.info(f'URL фильма - {player.post.url}')
 
+    for name, id_ in player.post.translators.name_id.items():
+        logging.info(f'Переводчик - {name}, ID: {id_}')
+
+    await asyncio.sleep(2)
     if content == 'movie':
         try:
             stream = await player.get_stream(translator_id)
