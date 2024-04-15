@@ -87,7 +87,7 @@ async def back_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data in player.post.translators.name_id.keys())
 async def translator_callback_handler(query: types.CallbackQuery):
-    global translator_id, choose_quality, video
+    global translator_id, choose_quality, video, player
     translator_name = query.data
     translator_id = player.post.translators.name_id[translator_name]  # id'shnik
 
