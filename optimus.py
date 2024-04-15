@@ -102,10 +102,10 @@ async def translator_callback_handler(query: types.CallbackQuery):
     translator_id = player.post.translators.name_id[translator_name]  # id'shnik
 
     # Далее вы можете выполнить какие-то действия в зависимости от выбранного переводчика
-    await asyncio.sleep(2)
+    await asyncio.sleep(5)
     await process_film()
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(5)
     if video is not None:
         choose_quality = await choose_quality_markups()
         await bot.send_message(query.message.chat.id, f'Выберете качество', reply_markup=choose_quality)
@@ -199,7 +199,7 @@ async def back_film(chat_id):
 async def process_film():
     global video, player, stream
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(5)
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content = meta_tag['content'].removeprefix('video.')
 
@@ -211,7 +211,7 @@ async def process_film():
     for name, id_ in player.post.translators.name_id.items():
         logging.info(f'Переводчик - {name}, ID: {id_}')
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(5)
     if content == 'movie':
         try:
             stream = await player.get_stream(translator_id)
