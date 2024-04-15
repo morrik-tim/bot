@@ -31,17 +31,6 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
-# Глобальные переменные
-player = None
-search_results = None
-film = 0
-markup_main = None
-choose_markup = None
-page = 1
-translator_id = None
-choose_quality = None
-video = None
-
 
 # Текстовые хэндлеры
 @dp.message_handler(commands=['start'])
@@ -202,7 +191,7 @@ async def back_film(chat_id):
 
 
 async def process_film():
-    global video, stream, player, translator_id
+    global video, player, translator_id
 
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content = meta_tag['content'].removeprefix('video.')
@@ -217,6 +206,7 @@ async def process_film():
 
     if content == 'movie':
         try:
+            player.__await__()
             stream = await player.get_stream(translator_id)
             if stream:  # Проверяем, что stream не равен False
                 video = stream.video
