@@ -107,8 +107,6 @@ async def translator_callback_handler(query: types.CallbackQuery):
 async def choose_quality_callback_handler(query: types.CallbackQuery):
     global video_url, seconds, width_clip, height_clip, video
 
-    print(4)
-
     chosen_quality_index = int(query.data)
     chosen_quality = video.qualities[chosen_quality_index]
 
@@ -220,22 +218,22 @@ async def process_film():
 
 async def get_video_params(video_file):
     clip = VideoFileClip(video_file)
-    seconds = clip.duration
-    width_clip = clip.w
-    height_clip = clip.h
+    seconds__ = clip.duration
+    width_clip__ = clip.w
+    height_clip__ = clip.h
     clip.close()
-    return seconds, width_clip, height_clip
+    return seconds__, width_clip__, height_clip__
 
 
-async def send_video(video_url, seconds, width_clip, height_clip, chat_id):
+async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
     async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(video_url) as response:
+        async with session.get(video_url_) as response:
             if response.status == 200:
                 await bot.send_message(chat_id, 'Началась загрузка!')
                 content_length = int(response.headers.get('Content-Length', 0))
-                with tqdm(total=content_length, unit='B', unit_scale=True, desc=video_url.split('/')[-1]) as pbar:
-                    async with aiofiles.open(video_url.split('/')[-1], mode='wb') as f:
+                with tqdm(total=content_length, unit='B', unit_scale=True, desc=video_url_.split('/')[-1]) as pbar:
+                    async with aiofiles.open(video_url_.split('/')[-1], mode='wb') as f:
                         while True:
                             chunk = await response.content.read(8192)
                             if not chunk:
@@ -244,13 +242,14 @@ async def send_video(video_url, seconds, width_clip, height_clip, chat_id):
                             pbar.update(len(chunk))
                     pbar.close()
                     await telethon_client.send_file(
-                        chat_id, video_url.split('/')[-1],
+                        chat_id, video_url_.split('/')[-1],
                         supports_streaming=True,
-                        attributes=[DocumentAttributeVideo(seconds, width_clip, height_clip, supports_streaming=True)]
+                        attributes=[
+                            DocumentAttributeVideo(seconds_, width_clip_, height_clip_, supports_streaming=True)]
                     )
                     logging.info("Видео отправлено!")
 
-                    os.remove(video_url.split('/')[-1])
+                    os.remove(video_url_.split('/')[-1])
             else:
                 logging.error(f"Failed to download video: {response.status}")
 
