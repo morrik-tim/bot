@@ -221,7 +221,7 @@ async def process_film():
             video = stream.video
         except Exception as e:
             print(f'Ошибка при загрузке стрима: {e}, id: {translator_id}')
-            stream = await player.get_stream(0)
+            stream = await player.get_stream()
             video = stream.video
     else:
         print('Это сериал, пока не работаем с сериалами')
