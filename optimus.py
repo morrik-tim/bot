@@ -203,8 +203,8 @@ async def process_film():
 
     if content == 'movie':
         try:
-            stream = player.get_stream(translator_id)
-            video = stream.video
+            stream = await player.get_stream(translator_id)
+            video = await stream.video
         except Exception as e:
             print(f'Ошибка при загрузке стрима: {e}, id: {translator_id}')
     else:
