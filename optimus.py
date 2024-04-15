@@ -32,7 +32,15 @@ dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
 # Глобальные переменные
-
+player = None
+search_results = None
+film = 0
+markup_main = None
+choose_markup = None
+page = 1
+translator_id = None
+choose_quality = None
+video = None
 
 
 # Текстовые хэндлеры
