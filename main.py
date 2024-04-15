@@ -99,7 +99,7 @@ async def translator_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data.isdigit() and int(query.data) < len(video.qualities))
 async def choose_quality_callback_handler(query: types.CallbackQuery):
-    global choose_quality, chosen_quality_index, video_url, seconds, width_clip, height_clip
+    global choose_quality, chosen_quality_index, video_url, seconds, width_clip, height_clip, video
 
     chosen_quality_index = int(query.data)
     chosen_quality = video.qualities[chosen_quality_index]
@@ -135,6 +135,7 @@ async def choose_translator_markups():
 
 @dp.message_handler()
 async def choose_quality_markups():
+    global video
     markup = types.InlineKeyboardMarkup()
     for i in range(len(video.qualities)):
         markup.add(types.InlineKeyboardButton(video.qualities[i], callback_data=i))
