@@ -190,9 +190,7 @@ async def back_film(chat_id):
 
 
 async def process_film():
-    global video, stream
-
-    player = await search_results[film].player
+    global video, stream, player, translator_id
 
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content = meta_tag['content'].removeprefix('video.')
