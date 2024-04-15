@@ -158,6 +158,8 @@ async def choose_quality_markups():
     markup = types.InlineKeyboardMarkup()
     for i in range(len(video.qualities)):
         markup.add(types.InlineKeyboardButton(video.qualities[i], callback_data=i))
+        print(video.qualities[i])
+
     return markup
 
 
@@ -219,6 +221,8 @@ async def process_film():
             video = stream.video
         except Exception as e:
             print(f'Ошибка при загрузке стрима: {e}, id: {translator_id}')
+            stream = await player.get_stream(0)
+            video = stream.video
     else:
         print('Это сериал, пока не работаем с сериалами')
 
