@@ -31,104 +31,18 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
+# Глобальные переменные
+player = None
+search_results = None
+film = 0
+markup_main = None
+choose_markup = None
+page = 1
+translator_id = None
+choose_quality = None
+video = None
 
-# методы
-async def next_film(chat_id):
-    global film, player
-    results = len(search_results)
-
-    if film < results - 1:
-        film += 1
-
-    player = await search_results[film].player
-
-    meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    content = meta_tag['content'].removeprefix('video.')
-
-    print(f'Название - {player.post.name}')
-    print(f'Тип контента - {content}')
-
-    await bot.send_photo(chat_id, search_results[film].poster, player.post.name,
-                         reply_markup=markup_main)
-
-
-async def back_film(chat_id):
-    global film, player
-
-    if film > 0:
-        film -= 1
-
-    player = await search_results[film].player
-
-    meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    content = meta_tag['content'].removeprefix('video.')
-
-    print(f'Название - {player.post.name}')
-    print(f'Тип контента - {content}')
-
-    await bot.send_photo(chat_id, search_results[film].poster, player.post.name,
-                         reply_markup=markup_main)
-
-
-async def process_film():
-    global video, player, stream, translator_id
-
-    meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    content = meta_tag['content'].removeprefix('video.')
-
-    logging.info(f'Название - {player.post.name}')
-    logging.info(f'Переводчик - {player.post.translators.names}')
-    logging.info(f'Тип контента - {content}')
-    logging.info(f'URL фильма - {player.post.url}')
-
-    if content == 'movie':
-        try:
-            stream = player.get_stream(translator_id)
-            video = stream.video
-        except Exception as e:
-            print(f'Ошибка при загрузке стрима: {e}, id: {translator_id}')
-    else:
-        print('это сериал пока не работаем с сериалами')
-
-
-async def get_video_params(video_file):
-    clip = VideoFileClip(video_file)
-    seconds = clip.duration
-    width_clip = clip.w
-    height_clip = clip.h
-    clip.close()
-    return seconds, width_clip, height_clip
-
-
-async def send_video(video_url, seconds, width_clip, height_clip, chat_id):
-    timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.get(video_url) as response:
-            if response.status == 200:
-                await bot.send_message(chat_id, 'Началась загрузка!')
-                content_length = int(response.headers.get('Content-Length', 0))
-                with tqdm(total=content_length, unit='B', unit_scale=True, desc=video_url.split('/')[-1]) as pbar:
-                    async with aiofiles.open(video_url.split('/')[-1], mode='wb') as f:
-                        while True:
-                            chunk = await response.content.read(8192)
-                            if not chunk:
-                                break
-                            await f.write(chunk)
-                            pbar.update(len(chunk))
-                    pbar.close()
-                    await telethon_client.send_file(
-                        chat_id, video_url.split('/')[-1],
-                        supports_streaming=True,
-                        attributes=[DocumentAttributeVideo(seconds, width_clip, height_clip, supports_streaming=True)]
-                    )
-                    logging.info("Видео отправлено!")
-
-                    os.remove(video_url.split('/')[-1])
-            else:
-                logging.error(f"Failed to download video: {response.status}")
-
-
-# текстовые хэндлеры
+# Текстовые хэндлеры
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
     await message.answer(f'ID чата {message.chat.id}')
@@ -183,7 +97,7 @@ async def back_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data in player.post.translators.name_id.keys())
 async def translator_callback_handler(query: types.CallbackQuery):
-    global translator_id, translator_name, choose_quality
+    global translator_id, choose_quality
     translator_name = query.data
     translator_id = player.post.translators.name_id[translator_name]  # id'shnik
 
@@ -195,7 +109,7 @@ async def translator_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data.isdigit() and int(query.data) < len(video.qualities))
 async def choose_quality_callback_handler(query: types.CallbackQuery):
-    global choose_quality, chosen_quality_index, video_url, seconds, width_clip, height_clip, video
+    global video_url, seconds, width_clip, height_clip
 
     chosen_quality_index = int(query.data)
     chosen_quality = video.qualities[chosen_quality_index]
@@ -236,6 +150,102 @@ async def choose_quality_markups():
     for i in range(len(video.qualities)):
         markup.add(types.InlineKeyboardButton(video.qualities[i], callback_data=i))
     return markup
+
+
+# Методы
+async def next_film(chat_id):
+    global film, player
+    results = len(search_results)
+
+    if film < results - 1:
+        film += 1
+
+    player = await search_results[film].player
+
+    meta_tag = player.post._soup_inst.find('meta', property='og:type')
+    content = meta_tag['content'].removeprefix('video.')
+
+    print(f'Название - {player.post.name}')
+    print(f'Тип контента - {content}')
+
+    await bot.send_photo(chat_id, search_results[film].poster, player.post.name,
+                         reply_markup=markup_main)
+
+
+async def back_film(chat_id):
+    global film, player
+
+    if film > 0:
+        film -= 1
+
+    player = await search_results[film].player
+
+    meta_tag = player.post._soup_inst.find('meta', property='og:type')
+    content = meta_tag['content'].removeprefix('video.')
+
+    print(f'Название - {player.post.name}')
+    print(f'Тип контента - {content}')
+
+    await bot.send_photo(chat_id, search_results[film].poster, player.post.name,
+                         reply_markup=markup_main)
+
+
+async def process_film():
+    global video, player, stream
+
+    meta_tag = player.post._soup_inst.find('meta', property='og:type')
+    content = meta_tag['content'].removeprefix('video.')
+
+    logging.info(f'Название - {player.post.name}')
+    logging.info(f'Переводчик - {player.post.translators.names}')
+    logging.info(f'Тип контента - {content}')
+    logging.info(f'URL фильма - {player.post.url}')
+
+    if content == 'movie':
+        try:
+            stream = player.get_stream(translator_id)
+            video = stream.video
+        except Exception as e:
+            print(f'Ошибка при загрузке стрима: {e}, id: {translator_id}')
+    else:
+        print('Это сериал, пока не работаем с сериалами')
+
+
+async def get_video_params(video_file):
+    clip = VideoFileClip(video_file)
+    seconds = clip.duration
+    width_clip = clip.w
+    height_clip = clip.h
+    clip.close()
+    return seconds, width_clip, height_clip
+
+
+async def send_video(video_url, seconds, width_clip, height_clip, chat_id):
+    timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(video_url) as response:
+            if response.status == 200:
+                await bot.send_message(chat_id, 'Началась загрузка!')
+                content_length = int(response.headers.get('Content-Length', 0))
+                with tqdm(total=content_length, unit='B', unit_scale=True, desc=video_url.split('/')[-1]) as pbar:
+                    async with aiofiles.open(video_url.split('/')[-1], mode='wb') as f:
+                        while True:
+                            chunk = await response.content.read(8192)
+                            if not chunk:
+                                break
+                            await f.write(chunk)
+                            pbar.update(len(chunk))
+                    pbar.close()
+                    await telethon_client.send_file(
+                        chat_id, video_url.split('/')[-1],
+                        supports_streaming=True,
+                        attributes=[DocumentAttributeVideo(seconds, width_clip, height_clip, supports_streaming=True)]
+                    )
+                    logging.info("Видео отправлено!")
+
+                    os.remove(video_url.split('/')[-1])
+            else:
+                logging.error(f"Failed to download video: {response.status}")
 
 
 if __name__ == '__main__':
