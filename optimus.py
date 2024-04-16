@@ -206,7 +206,7 @@ async def process_film():
         logging.info(f'Переводчик - {name}, ID: {id_}')
 
     if content == 'movie':
-        stream = await player.get_stream(self=translator_id)
+        stream = await player.get_stream(None)
         # stream = await rezkaGetStream.get_stream_rezka(url, translator_id)
         print(stream)
         print(4)
