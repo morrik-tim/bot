@@ -9,7 +9,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.utils import executor
 from dotenv import load_dotenv, find_dotenv
-from hdrezka import stream, post, AJAX, Search
+from hdrezka import Search
 from moviepy.editor import VideoFileClip
 from telethon import TelegramClient
 from telethon.tl.types import DocumentAttributeVideo
@@ -206,7 +206,7 @@ async def process_film():
         logging.info(f'Переводчик - {name}, ID: {id_}')
 
     if content == 'movie':
-        stream = await player.get_stream(translator_id)
+        stream = await player.get_stream(translator_id=translator_id)
         # stream = await rezkaGetStream.get_stream_rezka(url, translator_id)
         print(stream)
         print(4)
