@@ -9,7 +9,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.utils import executor
 from dotenv import load_dotenv, find_dotenv
-from hdrezka import *
+from hdrezka import stream, post, AJAX, Search
 from moviepy.editor import VideoFileClip
 from telethon import TelegramClient
 from telethon.tl.types import DocumentAttributeVideo
