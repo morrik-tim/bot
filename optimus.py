@@ -98,11 +98,11 @@ async def translator_callback_handler(query: types.CallbackQuery):
     await process_film()
     await asyncio.sleep(5)
 
-    if video is not None:
-        choose_quality = await choose_quality_markups()
-        await bot.send_message(query.message.chat.id, f'Выберете качество', reply_markup=choose_quality)
-    else:
-        print("ОШИБКА!!!")
+    # if video is not None:
+    #     choose_quality = await choose_quality_markups()
+    #     await bot.send_message(query.message.chat.id, f'Выберете качество', reply_markup=choose_quality)
+    # else:
+    #     print("ОШИБКА!!!")
 
 
 @dp.callback_query_handler(lambda query: query.data.isdigit() and int(query.data) < len(video.qualities))
