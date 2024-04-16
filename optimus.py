@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import rezkaGetStream
 
 import aiofiles
 import aiohttp
@@ -200,16 +201,16 @@ async def process_film():
     logging.info(f'Тип контента - {content}')
     logging.info(f'URL фильма - {player.post.url}')
 
+    url = player.post.url
+
     for name, id_ in player.post.translators.name_id.items():
         logging.info(f'Переводчик - {name}, ID: {id_}')
 
     if content == 'movie':
-        try:
-            stream = await player.get_stream(translator_id).__await__()
-            video = stream.video
-
-        except Exception as e:
-            logging.error(f'Ошибка при загрузке стрима: {e}, id: {translator_id}')
+        # stream = await player.get_stream(translator_id)
+        stream = await rezkaGetStream.get_stream_rezka(url, translator_id)
+        print(stream)
+        print(4)
     else:
         print('Это сериал, пока не работаем с сериалами')
 
