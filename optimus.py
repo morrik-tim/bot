@@ -9,7 +9,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.utils import executor
 from dotenv import load_dotenv, find_dotenv
-from hdrezka import Search
+from hdrezka import *
 from moviepy.editor import VideoFileClip
 from telethon import TelegramClient
 from telethon.tl.types import DocumentAttributeVideo
@@ -22,7 +22,6 @@ API_HASH = os.getenv("API_HASH")
 PHONE = os.getenv("PHONE")
 TOKEN = os.getenv("TOKEN")
 PASSWORD = os.getenv("PASSWORD")
-USER_AGENT = os.getenv("USER_AGENT")
 
 logging.basicConfig(level=logging.INFO)
 # telethon_client = TelegramClient('anon', API_ID, API_HASH)
