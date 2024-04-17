@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import rezkaGetStream
 
 import aiofiles
 import aiohttp
@@ -97,11 +96,11 @@ async def translator_callback_handler(query: types.CallbackQuery):
     await process_film()
     await asyncio.sleep(5)
 
-    # if video is not None:
-    #     choose_quality = await choose_quality_markups()
-    #     await bot.send_message(query.message.chat.id, f'Выберете качество', reply_markup=choose_quality)
-    # else:
-    #     print("ОШИБКА!!!")
+    if video is not None:
+        choose_quality = await choose_quality_markups()
+        await bot.send_message(query.message.chat.id, f'Выберете качество', reply_markup=choose_quality)
+    else:
+        print("ОШИБКА!!!")
 
 
 @dp.callback_query_handler(lambda query: query.data.isdigit() and int(query.data) < len(video.qualities))
@@ -111,13 +110,12 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
     chosen_quality_index = int(query.data)
     chosen_quality = video.qualities[chosen_quality_index]
 
-    # Действия, которые нужно выполнить при выборе качества видео
-    # Например, отправка сообщения с выбранным качеством
     await query.message.answer(f"Вы выбрали качество: {chosen_quality}")
     video_url = (await video[chosen_quality_index].last_url).mp4
 
     seconds, width_clip, height_clip = await get_video_params(video_url)
-    await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
+    print('successfully get video params')
+    # await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
 
 
 # Генерация маркапов
@@ -206,10 +204,8 @@ async def process_film():
         logging.info(f'Переводчик - {name}, ID: {id_}')
 
     if content == 'movie':
-        stream = await player.get_stream(None)
-        # stream = await rezkaGetStream.get_stream_rezka(url, translator_id)
-        print(stream)
-        print(4)
+        stream = await player.get_stream(translator_id)
+        video = stream.get_video()
     else:
         print('Это сериал, пока не работаем с сериалами')
 
