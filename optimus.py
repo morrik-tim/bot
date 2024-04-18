@@ -260,7 +260,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                         caption=player.post.name,
                         supports_streaming=True,
                         use_cache=True,
-                        part_size_kb=10240,
+                        part_size_kb=102400,
                         attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)],
                         progress_callback=upload_progress_callback
                     )
