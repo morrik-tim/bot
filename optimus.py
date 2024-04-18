@@ -248,7 +248,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                 with tqdm(total=content_length, unit='B', unit_scale=True, desc=video_url_.split('/')[-1]) as pbar:
                     async with aiofiles.open(video_url_.split('/')[-1], mode='wb') as f:
                         while True:
-                            chunk = await response.content.read(8192)
+                            chunk = await response.content.read(65536)
                             if not chunk:
                                 break
                             await f.write(chunk)
