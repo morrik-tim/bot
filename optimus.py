@@ -77,7 +77,7 @@ async def main(message: types.Message):
 
 @dp.message_handler(content_types=['video'])
 async def reply_video(message: types.Message):
-    video_ = message.video
+    video_ = message.video.file_id
     await bot.send_video(chat_id=reply_id, video=video_)
 
 
