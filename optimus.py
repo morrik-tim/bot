@@ -128,7 +128,7 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
 
     seconds, width_clip, height_clip = await get_video_params(video_url)
     print('successfully get video params')
-    await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
+    await send_video(video_url, seconds, width_clip, height_clip)
 
 
 # Генерация маркапов
