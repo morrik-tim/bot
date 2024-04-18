@@ -53,7 +53,9 @@ async def clear(message: types.Message):
 
 @dp.message_handler(content_types=['text'])
 async def main(message: types.Message):
-    global player, search_results, film, markup_main, choose_markup, page
+    global player, search_results, film, markup_main, choose_markup, page, reply_id
+
+    reply_id = message.chat.id
 
     film = 0
     page = 1
@@ -229,15 +231,10 @@ async def get_video_params(video_file):
     clip.close()
     return seconds__, width_clip__, height_clip__
 
-
 async def upload_progress_callback(current, total):
-    current_mb = current / (1024 * 1024)  # Конвертировать текущий размер из байтов в мегабайты
-    total_mb = total / (1024 * 1024)  # Конвертировать общий размер из байтов в мегабайты
-    print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
-
+    print(f"Uploaded {current} bytes out of {total}")
 
 async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
-    chat_id_ = -1002112068525
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(video_url_) as response:
@@ -256,19 +253,61 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                     await bot.send_message(chat_id, 'Загрузка завершилась, началась отправка!')
                     await upload_progress_callback(pbar.n, content_length)
                     await telethon_client.send_file(
-                        chat_id_, video_url_.split('/')[-1],
+                        chat_id, video_url_.split('/')[-1],
                         caption=player.post.name,
                         supports_streaming=True,
-                        use_cache=True,
+                        use_cache=False,
                         part_size_kb=102400,
                         attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)],
-                        progress_callback=upload_progress_callback
+                        progress_callback=upload_progress_callback,
+                        file_size=content_length  # Добавление параметра file_size
                     )
                     logging.info("Видео отправлено!")
 
                     os.remove(video_url_.split('/')[-1])
             else:
                 logging.error(f"Failed to download video: {response.status}")
+
+
+# async def upload_progress_callback(current, total):
+#     current_mb = current / (1024 * 1024)  # Конвертировать текущий размер из байтов в мегабайты
+#     total_mb = total / (1024 * 1024)  # Конвертировать общий размер из байтов в мегабайты
+#     print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
+#
+#
+# async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
+#     chat_id_ = -1002112068525
+#     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
+#     async with aiohttp.ClientSession(timeout=timeout) as session:
+#         async with session.get(video_url_) as response:
+#             if response.status == 200:
+#                 await bot.send_message(chat_id, 'Началась загрузка!')
+#                 content_length = int(response.headers.get('Content-Length', 0))
+#                 with tqdm(total=content_length, unit='B', unit_scale=True, desc=video_url_.split('/')[-1]) as pbar:
+#                     async with aiofiles.open(video_url_.split('/')[-1], mode='wb') as f:
+#                         while True:
+#                             chunk = await response.content.read(8192)
+#                             if not chunk:
+#                                 break
+#                             await f.write(chunk)
+#                             pbar.update(len(chunk))
+#                     pbar.close()
+#                     await bot.send_message(chat_id, 'Загрузка завершилась, началась отправка!')
+#                     await upload_progress_callback(pbar.n, content_length)
+#                     await telethon_client.send_file(
+#                         chat_id_, video_url_.split('/')[-1],
+#                         caption=player.post.name,
+#                         supports_streaming=True,
+#                         use_cache=True,
+#                         part_size_kb=1024,
+#                         attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_, supports_streaming=true)],
+#                         progress_callback=upload_progress_callback
+#                     )
+#                     logging.info("Видео отправлено!")
+#
+#                     os.remove(video_url_.split('/')[-1])
+#             else:
+#                 logging.error(f"Failed to download video: {response.status}")
 
 
 if __name__ == '__main__':
