@@ -23,8 +23,8 @@ TOKEN = os.getenv("TOKEN")
 PASSWORD = os.getenv("PASSWORD")
 
 logging.basicConfig(level=logging.INFO)
-# telethon_client = TelegramClient('anon', API_ID, API_HASH)
-# telethon_client.start(phone=PHONE, password=PASSWORD)
+telethon_client = TelegramClient('anon', API_ID, API_HASH)
+telethon_client.start(phone=PHONE, password=PASSWORD)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
@@ -115,7 +115,7 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
 
     seconds, width_clip, height_clip = await get_video_params(video_url)
     print('successfully get video params')
-    # await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
+    await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
 
 
 # Генерация маркапов
@@ -205,7 +205,7 @@ async def process_film():
 
     if content == 'movie':
         stream = await player.get_stream(translator_id)
-        video = stream.get_video()
+        video = stream.video
     else:
         print('Это сериал, пока не работаем с сериалами')
 
@@ -235,11 +235,16 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                             await f.write(chunk)
                             pbar.update(len(chunk))
                     pbar.close()
+
+                    film_name = f'{player.post.name} - {player.post.translators.names[translator_id]}'
+                    renamed_film = os.rename(video_url_.split('/')[-1], film_name)
+
                     await telethon_client.send_file(
-                        chat_id, video_url_.split('/')[-1],
-                        supports_streaming=True,
-                        attributes=[
-                            DocumentAttributeVideo(seconds_, width_clip_, height_clip_, supports_streaming=True)]
+                        chat_id, renamed_film,
+                        file_name=film_name,
+                        use_cache=False,
+                        part_size_kb=512,
+                        attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)]
                     )
                     logging.info("Видео отправлено!")
 
