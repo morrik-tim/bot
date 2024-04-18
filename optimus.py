@@ -128,7 +128,7 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
 
     seconds, width_clip, height_clip = await get_video_params(video_url)
     print('successfully get video params')
-    await send_video(video_url, seconds, width_clip, height_clip)
+    await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
 
 
 # Генерация маркапов
@@ -236,13 +236,13 @@ async def upload_progress_callback(current, total):
     print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
 
 
-async def send_video(video_url_, seconds_, width_clip_, height_clip_):
+async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
     chat_id_ = -1002112068525
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(video_url_) as response:
             if response.status == 200:
-                await bot.send_message(chat_id_, 'Началась загрузка!')
+                await bot.send_message(chat_id, 'Началась загрузка!')
                 content_length = int(response.headers.get('Content-Length', 0))
                 with tqdm(total=content_length, unit='B', unit_scale=True, desc=video_url_.split('/')[-1]) as pbar:
                     async with aiofiles.open(video_url_.split('/')[-1], mode='wb') as f:
@@ -253,7 +253,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_):
                             await f.write(chunk)
                             pbar.update(len(chunk))
                     pbar.close()
-                    await bot.send_message(chat_id_, 'Загрузка завершилась, началась отправка!')
+                    await bot.send_message(chat_id, 'Загрузка завершилась, началась отправка!')
                     await upload_progress_callback(pbar.n, content_length)
                     await telethon_client.send_file(
                         chat_id_, video_url_.split('/')[-1],
