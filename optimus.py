@@ -218,8 +218,6 @@ async def get_video_params(video_file):
     clip.close()
     return seconds__, width_clip__, height_clip__
 
-async def upload_progress_callback(current, total):
-    print(f"Uploaded {current} bytes out of {total}")
 
 async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
@@ -236,15 +234,13 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                                 break
                             await f.write(chunk)
                             pbar.update(len(chunk))
-                            await upload_progress_callback(pbar.n, content_length)
                     pbar.close()
 
                     await telethon_client.send_file(
                         chat_id, video_url_.split('/')[-1],
                         use_cache=False,
                         part_size_kb=1024,
-                        attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)],
-                        progress_callback=upload_progress_callback  # Передача функции обратного вызова для отслеживания прогресса загрузки
+                        attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)]
                     )
                     logging.info("Видео отправлено!")
 
