@@ -217,7 +217,9 @@ async def get_video_params(video_file):
     return seconds__, width_clip__, height_clip__
 
 async def upload_progress_callback(current, total):
-    print(f"Uploaded {current} bytes out of {total}")
+    current_mb = current / (1024 * 1024)  # Конвертировать текущий размер из байтов в мегабайты
+    total_mb = total / (1024 * 1024)  # Конвертировать общий размер из байтов в мегабайты
+    print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
 
 async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
@@ -241,7 +243,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                         chat_id, video_url_.split('/')[-1],
                         caption=player.post.name,
                         supports_streaming=True,
-                        use_cache=False,
+                        use_cache=True,
                         part_size_kb=1024,
                         attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)],
                         progress_callback=upload_progress_callback
