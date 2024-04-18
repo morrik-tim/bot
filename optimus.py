@@ -32,11 +32,18 @@ dp.middleware.setup(LoggingMiddleware())
 
 
 # Текстовые хэндлеры
+@dp.message_handler(commands=['info'])
+async def start(message: types.Message):
+    await message.answer(f'ID чата {message.chat.id}')
+
+
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
+    global reply_id
     await message.answer(f'ID чата {message.chat.id}')
     await message.answer("Введите название фильма или сериала.")
     logging.info(f"Chat ID: {message.chat.id}")
+    reply_id = message.chat.id
 
 
 @dp.message_handler(commands=['clear'])
@@ -66,6 +73,12 @@ async def main(message: types.Message):
 
     await message.answer_photo(search_results[film].poster, player.post.name, reply_markup=markup_main)
     choose_markup = await choose_translator_markups()
+
+
+@dp.message_handler(content_types=['video'])
+async def reply_video(message: types.Message):
+    video_ = message.video
+    await bot.send_video(chat_id=reply_id, video=video_)
 
 
 # Хэндлеры кнопок
@@ -216,17 +229,20 @@ async def get_video_params(video_file):
     clip.close()
     return seconds__, width_clip__, height_clip__
 
+
 async def upload_progress_callback(current, total):
     current_mb = current / (1024 * 1024)  # Конвертировать текущий размер из байтов в мегабайты
     total_mb = total / (1024 * 1024)  # Конвертировать общий размер из байтов в мегабайты
     print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
 
-async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
+
+async def send_video(video_url_, seconds_, width_clip_, height_clip_):
+    chat_id_ = -1002112068525
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(video_url_) as response:
             if response.status == 200:
-                await bot.send_message(chat_id, 'Началась загрузка!')
+                await bot.send_message(chat_id_, 'Началась загрузка!')
                 content_length = int(response.headers.get('Content-Length', 0))
                 with tqdm(total=content_length, unit='B', unit_scale=True, desc=video_url_.split('/')[-1]) as pbar:
                     async with aiofiles.open(video_url_.split('/')[-1], mode='wb') as f:
@@ -237,14 +253,14 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                             await f.write(chunk)
                             pbar.update(len(chunk))
                     pbar.close()
-                    await bot.send_message(chat_id, 'Загрузка завершилась, началась отправка!')
+                    await bot.send_message(chat_id_, 'Загрузка завершилась, началась отправка!')
                     await upload_progress_callback(pbar.n, content_length)
                     await telethon_client.send_file(
-                        chat_id, video_url_.split('/')[-1],
+                        chat_id_, video_url_.split('/')[-1],
                         caption=player.post.name,
                         supports_streaming=True,
                         use_cache=True,
-                        part_size_kb=1024,
+                        part_size_kb=10240,
                         attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)],
                         progress_callback=upload_progress_callback
                     )
