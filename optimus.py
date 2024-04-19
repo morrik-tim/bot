@@ -232,24 +232,28 @@ async def get_video_params(video_file):
     return seconds__, width_clip__, height_clip__
 
 
-async def send_chat_progress(current, total):
-    current_mb = current / (1024 * 1024)  # Конвертировать текущий размер из байтов в мегабайты
-    total_mb = total / (1024 * 1024)
-    wait_time = random.randint(2, 60)
-    await asyncio.sleep(wait_time)
-    await bot.send_message(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
-    print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
-
-
-async def upload_progress_callback(current, total):
-    global current_mb, total_mb
+async def upload_progress_callback(current, total, chat_id):
     current_mb = current / (1024 * 1024)  # Конвертировать текущий размер из байтов в мегабайты
     total_mb = total / (1024 * 1024)  # Конвертировать общий размер из байтов в мегабайты
+    # Определяем порог, при котором будет обновлено сообщение
+    threshold = 0.1  # Например, 10% изменения
+    # Вычисляем процент завершенности загрузки
+    progress_percentage = current / total
+    # Проверяем, превышает ли изменение прогресса порог
+    if progress_percentage >= threshold:
+        # Формируем сообщение о прогрессе загрузки
+        message = f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB ({progress_percentage:.1%})"
+        # Отправляем новое сообщение или обновляем последнее отправленное
+        if 'last_message' not in upload_progress_callback.__dict__:
+            upload_progress_callback.last_message = await bot.send_message(chat_id, message)
+        else:
+            await bot.edit_message_text(chat_id, upload_progress_callback.last_message.message_id, message)
+
     print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
 
 
 async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
-    chat_id_ = -1002112068525
+    const_chat_id = -1002112068525
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(video_url_) as response:
@@ -265,16 +269,16 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                             await f.write(chunk)
                             pbar.update(len(chunk))
                     pbar.close()
-                    await bot.send_message(chat_id_, 'Загрузка завершилась, началась отправка!')
-                    await send_chat_progress(pbar.n, content_length)
+                    await bot.send_message(chat_id, 'Загрузка завершилась, началась отправка!')
+                    await upload_progress_callback(pbar.n, content_length, chat_id)
                     await telethon_client.send_file(
-                        chat_id, video_url_.split('/')[-1],
+                        const_chat_id, video_url_.split('/')[-1],
                         caption=player.post.name,
                         supports_streaming=True,
                         use_cache=True,
                         part_size_kb=2048,
                         attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)],
-                        progress_callback=send_chat_progress(),
+                        progress_callback=upload_progress_callback(),
                         file_size=content_length  # Добавление параметра file_size
                     )
                     logging.info("Видео отправлено!")
