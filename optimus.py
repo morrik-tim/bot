@@ -41,15 +41,9 @@ async def start(message: types.Message):
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
     global reply_id
-    await message.answer(f'ID чата {message.chat.id}')
     await message.answer("Введите название фильма или сериала.")
     logging.info(f"Chat ID: {message.chat.id}")
     reply_id = message.chat.id
-
-
-@dp.message_handler(commands=['clear'])
-async def clear(message: types.Message):
-    await message.delete()
 
 
 @dp.message_handler(content_types=['text'])
@@ -73,9 +67,8 @@ async def main(message: types.Message):
     print(f'Тип контента - {content}')
 
     film = 0
-
+    await bot.delete_message(message.chat.id, message.message_id - 1)
     await message.answer_photo(search_results[film].poster, player.post.name, reply_markup=markup_main)
-    choose_markup = await choose_translator_markups()
 
 
 @dp.message_handler(content_types=['video'])
@@ -87,17 +80,26 @@ async def reply_video(message: types.Message):
 # Хэндлеры кнопок
 @dp.callback_query_handler(lambda query: query.data == 'select')
 async def select_callback_handler(query: types.CallbackQuery):
-    await bot.send_message(query.message.chat.id, 'Выберите озвучку', reply_markup=choose_markup)
+    choose_markup = await choose_translator_markups()
+
+    await bot.edit_message_media(
+        chat_id=query.message.chat.id,
+        message_id=query.message.message_id,
+        media=types.InputMediaPhoto(
+            media=search_results[film].poster,
+            caption=f'Выберите озвучку для {player.post.name}'),
+        reply_markup=choose_markup
+    )
 
 
 @dp.callback_query_handler(lambda query: query.data == 'next')
 async def next_callback_handler(query: types.CallbackQuery):
-    await next_film(query.message.chat.id)
+    await next_film(query.message.chat.id, query.message.message_id)
 
 
 @dp.callback_query_handler(lambda query: query.data == 'back')
 async def back_callback_handler(query: types.CallbackQuery):
-    await back_film(query.message.chat.id)
+    await back_film(query.message.chat.id, query.message.message_id)
 
 
 @dp.callback_query_handler(lambda query: query.data in player.post.translators.name_id.keys())
@@ -113,7 +115,15 @@ async def translator_callback_handler(query: types.CallbackQuery):
 
     if video is not None:
         choose_quality = await choose_quality_markups()
-        await bot.send_message(query.message.chat.id, f'Выберете качество', reply_markup=choose_quality)
+        # await query.message.edit_text('Выберете качество', reply_markup=choose_quality)
+        await bot.edit_message_media(
+            chat_id=query.message.chat.id,
+            message_id=query.message.message_id,
+            media=types.InputMediaPhoto(
+                media=search_results[film].poster,
+                caption=f'Выберете качество для {player.post.name}'),
+            reply_markup=choose_quality
+        )
     else:
         print("ОШИБКА!!!")
 
@@ -125,22 +135,31 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
     chosen_quality_index = int(query.data)
     chosen_quality = video.qualities[chosen_quality_index]
 
-    await query.message.answer(f"Вы выбрали качество: {chosen_quality}")
+    await bot.edit_message_media(
+        chat_id=query.message.chat.id,
+        message_id=query.message.message_id,
+        media=types.InputMediaPhoto(
+            media=search_results[film].poster,
+            caption=f'Вы выбрали качество: {chosen_quality}'),
+        reply_markup=None
+    )
     video_url = (await video[chosen_quality_index].last_url).mp4
 
     seconds, width_clip, height_clip = await get_video_params(video_url)
     print('successfully get video params')
-    await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
+    # await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
 
 
 # Генерация маркапов
 @dp.message_handler()
 async def main_markups():
     markup = types.InlineKeyboardMarkup()
+
     markup.row(
         types.InlineKeyboardButton('Назад', callback_data='back'),
         types.InlineKeyboardButton('Далее', callback_data='next'))
     markup.add(types.InlineKeyboardButton('Выбрать', callback_data='select'))
+
     return markup
 
 
@@ -156,16 +175,16 @@ async def choose_translator_markups():
 @dp.message_handler()
 async def choose_quality_markups():
     global video
+
     markup = types.InlineKeyboardMarkup()
+
     for i in range(len(video.qualities)):
         markup.add(types.InlineKeyboardButton(video.qualities[i], callback_data=i))
-        print(video.qualities[i])
-
     return markup
 
 
 # Методы
-async def next_film(chat_id):
+async def next_film(chat_id, message_id):
     global film, player
     results = len(search_results)
 
@@ -180,11 +199,16 @@ async def next_film(chat_id):
     print(f'Название - {player.post.name}')
     print(f'Тип контента - {content}')
 
-    await bot.send_photo(chat_id, search_results[film].poster, player.post.name,
-                         reply_markup=markup_main)
+    await bot.edit_message_media(
+        chat_id=chat_id,
+        message_id=message_id,
+        media=types.InputMediaPhoto(
+            media=search_results[film].poster,
+            caption=player.post.name),
+        reply_markup=markup_main)
 
 
-async def back_film(chat_id):
+async def back_film(chat_id, message_id):
     global film, player
 
     if film > 0:
@@ -198,8 +222,13 @@ async def back_film(chat_id):
     print(f'Название - {player.post.name}')
     print(f'Тип контента - {content}')
 
-    await bot.send_photo(chat_id, search_results[film].poster, player.post.name,
-                         reply_markup=markup_main)
+    await bot.edit_message_media(
+        chat_id=chat_id,
+        message_id=message_id,
+        media=types.InputMediaPhoto(
+            media=search_results[film].poster,
+            caption=player.post.name),
+        reply_markup=markup_main)
 
 
 async def process_film():
@@ -207,14 +236,6 @@ async def process_film():
 
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content = meta_tag['content'].removeprefix('video.')
-
-    logging.info(f'Название - {player.post.name}')
-    logging.info(f'Переводчик - {player.post.translators.names}')
-    logging.info(f'Тип контента - {content}')
-    logging.info(f'URL фильма - {player.post.url}')
-
-    for name, id_ in player.post.translators.name_id.items():
-        logging.info(f'Переводчик - {name}, ID: {id_}')
 
     if content == 'movie':
         stream = await player.get_stream(translator_id)
@@ -235,18 +256,6 @@ async def get_video_params(video_file):
 async def upload_progress_callback(current, total):
     current_mb = current / (1024 * 1024)
     total_mb = total / (1024 * 1024)
-
-    progress_percentage = current / total
-    threshold = 0.1
-    if progress_percentage >= threshold:
-        # Формируем сообщение о прогрессе загрузки
-        message = f"Uploaded {current} bytes out of {total} ({progress_percentage:.1%})"
-        # Отправляем новое сообщение или обновляем последнее отправленное
-        if 'last_message' not in upload_progress_callback.__dict__:
-            upload_progress_callback.last_message = await bot.send_message(gl, message)
-        else:
-            await bot.edit_message_text(gl, upload_progress_callback.last_message.message_id, message)
-
 
     print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
 
