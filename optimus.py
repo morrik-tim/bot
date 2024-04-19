@@ -236,21 +236,24 @@ async def upload_progress_callback(current, total):
     current_mb = current / (1024 * 1024)
     total_mb = total / (1024 * 1024)
 
-    threshold = 0.1
     progress_percentage = current / total
+    threshold = 0.1
     if progress_percentage >= threshold:
-        message = f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB ({progress_percentage:.1%})"
-        if "last_message" not in upload_progress_callback.__dict__:
-            upload_progress_callback.last_message = await bot.send_message(gl_ch_id, message)
+        # Формируем сообщение о прогрессе загрузки
+        message = f"Uploaded {current} bytes out of {total} ({progress_percentage:.1%})"
+        # Отправляем новое сообщение или обновляем последнее отправленное
+        if 'last_message' not in upload_progress_callback.__dict__:
+            upload_progress_callback.last_message = await bot.send_message(gl, message)
         else:
-            await bot.edit_message_text(gl_ch_id, upload_progress_callback.last_message.message_id, message)
+            await bot.edit_message_text(gl, upload_progress_callback.last_message.message_id, message)
+
 
     print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
 
 
 async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
-    global gl_ch_id
-    gl_ch_id = chat_id
+    global gl
+    gl = chat_id
     const_chat_id = -1002112068525
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
     async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -277,7 +280,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                         part_size_kb=2048,
                         attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)],
                         progress_callback=upload_progress_callback,
-                        file_size=content_length  # Добавление параметра file_size
+                        file_size=content_length
                     )
                     logging.info("Видео отправлено!")
 
