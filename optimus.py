@@ -240,7 +240,7 @@ async def upload_progress_callback(current, total, chat_id):
     progress_percentage = current / total
     if progress_percentage >= threshold:
         message = f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB ({progress_percentage:.1%})"
-        if last_message not in upload_progress_callback.__dict__:
+        if "last_message" not in upload_progress_callback.__dict__:
             upload_progress_callback.last_message = await bot.send_message(chat_id, message)
         else:
             await bot.edit_message_text(chat_id, upload_progress_callback.last_message.message_id, message)
