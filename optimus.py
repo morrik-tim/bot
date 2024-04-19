@@ -231,10 +231,13 @@ async def get_video_params(video_file):
     return seconds__, width_clip__, height_clip__
 
 
-async def send_chat_progress():
+async def send_chat_progress(current, total):
+    current_mb = current / (1024 * 1024)  # Конвертировать текущий размер из байтов в мегабайты
+    total_mb = total / (1024 * 1024)
     wait_time = random.randint(2, 60)
     await asyncio.sleep(wait_time)
     await bot.send_message(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
+    print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
 
 
 async def upload_progress_callback(current, total):
@@ -262,7 +265,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                             pbar.update(len(chunk))
                     pbar.close()
                     await bot.send_message(chat_id_, 'Загрузка завершилась, началась отправка!')
-                    await upload_progress_callback(pbar.n, content_length)
+                    await send_chat_progress(pbar.n, content_length)
                     await telethon_client.send_file(
                         chat_id, video_url_.split('/')[-1],
                         caption=player.post.name,
