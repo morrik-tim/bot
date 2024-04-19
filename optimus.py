@@ -274,7 +274,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                         use_cache=True,
                         part_size_kb=2048,
                         attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)],
-                        progress_callback=upload_progress_callback(chat_id=chat_id),
+                        progress_callback=upload_progress_callback(pbar.n, content_length, chat_id),
                         file_size=content_length  # Добавление параметра file_size
                     )
                     logging.info("Видео отправлено!")
