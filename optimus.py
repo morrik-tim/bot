@@ -109,7 +109,6 @@ async def translator_callback_handler(query: types.CallbackQuery):
     # Далее вы можете выполнить какие-то действия в зависимости от выбранного переводчика
     await asyncio.sleep(5)
     await process_film()
-    await asyncio.sleep(5)
 
     if video is not None:
         choose_quality = await choose_quality_markups()
@@ -232,13 +231,21 @@ async def get_video_params(video_file):
     return seconds__, width_clip__, height_clip__
 
 
+async def send_chat_progress():
+    wait_time = random.randint(2, 60)
+    await asyncio.sleep(wait_time)
+    await bot.send_message(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
+
+
 async def upload_progress_callback(current, total):
+    global current_mb, total_mb
     current_mb = current / (1024 * 1024)  # Конвертировать текущий размер из байтов в мегабайты
     total_mb = total / (1024 * 1024)  # Конвертировать общий размер из байтов в мегабайты
     print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
 
 
 async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
+    chat_id_ = -1002112068525
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(video_url_) as response:
@@ -248,13 +255,13 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                 with tqdm(total=content_length, unit='B', unit_scale=True, desc=video_url_.split('/')[-1]) as pbar:
                     async with aiofiles.open(video_url_.split('/')[-1], mode='wb') as f:
                         while True:
-                            chunk = await response.content.read(1000000)
+                            chunk = await response.content.read(32768)
                             if not chunk:
                                 break
                             await f.write(chunk)
                             pbar.update(len(chunk))
                     pbar.close()
-                    await bot.send_message(chat_id, 'Загрузка завершилась, началась отправка!')
+                    await bot.send_message(chat_id_, 'Загрузка завершилась, началась отправка!')
                     await upload_progress_callback(pbar.n, content_length)
                     await telethon_client.send_file(
                         chat_id, video_url_.split('/')[-1],
@@ -263,7 +270,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                         use_cache=True,
                         part_size_kb=2048,
                         attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)],
-                        progress_callback=upload_progress_callback,
+                        progress_callback=send_chat_progress(),
                         file_size=content_length  # Добавление параметра file_size
                     )
                     logging.info("Видео отправлено!")
