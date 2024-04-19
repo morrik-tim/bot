@@ -232,7 +232,7 @@ async def get_video_params(video_file):
     return seconds__, width_clip__, height_clip__
 
 
-async def upload_progress_callback(current, total, chat_id):
+async def upload_progress_callback(current, total):
     current_mb = current / (1024 * 1024)
     total_mb = total / (1024 * 1024)
 
@@ -241,14 +241,16 @@ async def upload_progress_callback(current, total, chat_id):
     if progress_percentage >= threshold:
         message = f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB ({progress_percentage:.1%})"
         if "last_message" not in upload_progress_callback.__dict__:
-            upload_progress_callback.last_message = await bot.send_message(chat_id, message)
+            upload_progress_callback.last_message = await bot.send_message(gl_ch_id, message)
         else:
-            await bot.edit_message_text(chat_id, upload_progress_callback.last_message.message_id, message)
+            await bot.edit_message_text(gl_ch_id, upload_progress_callback.last_message.message_id, message)
 
     print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB")
 
 
 async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
+    global gl_ch_id
+    gl_ch_id = chat_id
     const_chat_id = -1002112068525
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
     async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -266,7 +268,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                             pbar.update(len(chunk))
                     pbar.close()
                     await bot.send_message(chat_id, 'Загрузка завершилась, началась отправка!')
-                    await upload_progress_callback(pbar.n, content_length, chat_id)
+                    await upload_progress_callback(pbar.n, content_length)
                     await telethon_client.send_file(
                         const_chat_id, video_url_.split('/')[-1],
                         caption=player.post.name,
@@ -274,7 +276,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                         use_cache=True,
                         part_size_kb=2048,
                         attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)],
-                        progress_callback=upload_progress_callback(pbar.n, content_length, chat_id),
+                        progress_callback=upload_progress_callback,
                         file_size=content_length  # Добавление параметра file_size
                     )
                     logging.info("Видео отправлено!")
