@@ -146,7 +146,6 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
     video_url = (await video[chosen_quality_index].last_url).mp4
 
     seconds, width_clip, height_clip = await get_video_params(video_url)
-    print('successfully get video params')
     await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
 
 
