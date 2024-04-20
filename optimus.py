@@ -69,8 +69,7 @@ async def main(message: types.Message):
     del_msg_id = message.message_id
 
     markup_main = await main_markups()
-    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id - 1)
-    await bot.delete_message(chat_id=message.chat.id, message_id=message.message_id - 2)
+
     await message.answer_photo(search_results[film].poster, player.post.name, reply_markup=markup_main)
 
 
@@ -90,83 +89,58 @@ async def select_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data == 'new_search')
 async def new_search_callback_handler(query: types.CallbackQuery):
-    await bot.delete_message(chat_id=query.message.chat.id, message_id=del_msg_id)
-    await query.message.delete()
+
     await query.message.answer("Введите название фильма или сериала.")
 
 
 @dp.callback_query_handler(lambda query: query.data == 'next')
 async def next_callback_handler(query: types.CallbackQuery):
     await next_film(query.message.chat.id, query.message.message_id)
+    await asyncio.sleep(1)
 
 
 @dp.callback_query_handler(lambda query: query.data == 'back')
 async def back_callback_handler(query: types.CallbackQuery):
     await back_film(query.message.chat.id, query.message.message_id)
+    await asyncio.sleep(1)
 
 
 @dp.callback_query_handler(lambda query: query.data == 'back2menu')
 async def back_callback_handler(query: types.CallbackQuery):
     await back2menu(query.message.chat.id, query.message.message_id)
+    await asyncio.sleep(1)
 
 
-@dp.callback_query_handler(lambda query: query.data in player.post.translators.name_id.keys())
+@dp.callback_query_handler(
+    lambda query: query.data in player.post.translators.name_id.keys() or query.data == 'default')
 async def translator_callback_handler(query: types.CallbackQuery):
     global translator_id, choose_quality, video, player, translator_name
 
-    translator_name = query.data
-    translator_id = player.post.translators.name_id[translator_name]  # id'shnik
-
-    # Далее вы можете выполнить какие-то действия в зависимости от выбранного переводчика
-    await asyncio.sleep(5)
-    await process_film()
-
-    choose_quality = await choose_quality_markups()
-
-    if video is not None:
-        await bot.edit_message_media(
-            chat_id=query.message.chat.id,
-            message_id=query.message.message_id,
-            media=types.InputMediaPhoto(
-                media=search_results[film].poster,
-                caption=f'Выберете качество для {player.post.name}'),
-            reply_markup=choose_quality
-        )
+    if query.data == 'default':
+        translator_name = query.data
+        translator_id = None
     else:
-        print("ОШИБКА!!!")
+        translator_name = query.data
+        translator_id = player.post.translators.name_id[translator_name]  # id'shnik
 
+    meta_tag = player.post._soup_inst.find('meta', property='og:type')
+    content = meta_tag['content'].removeprefix('video.')
 
-@dp.callback_query_handler(lambda query: query.data == 'original')
-async def translator_callback_handler(query: types.CallbackQuery):
-    global translator_id, choose_quality, video, player
-
-    translator_id = None
-
-    # Далее вы можете выполнить какие-то действия в зависимости от выбранного переводчика
-    await asyncio.sleep(5)
-    await process_film()
-
-    choose_quality = await choose_quality_markups()
-
-    if video is not None:
-        await bot.edit_message_media(
-            chat_id=query.message.chat.id,
-            message_id=query.message.message_id,
-            media=types.InputMediaPhoto(
-                media=search_results[film].poster,
-                caption=f'Выберете качество для {player.post.name}'),
-            reply_markup=choose_quality
-        )
+    if content == 'movie':
+        await process_film(query.message)
     else:
-        print("ОШИБКА!!!")
+        await process_serial(query.message)
 
 
-@dp.callback_query_handler(lambda query: query.data.isdigit() and int(query.data) < len(video.qualities))
+@dp.callback_query_handler(lambda query: query.data in video.qualities)
 async def choose_quality_callback_handler(query: types.CallbackQuery):
-    global video_url, seconds, width_clip, height_clip, video, chosen_quality
+    global video_url, seconds, width_clip, height_clip, video, chosen_quality, chosen_quality_index
 
-    chosen_quality_index = int(query.data)
-    chosen_quality = video.qualities[chosen_quality_index]
+    chosen_quality = query.data
+    for i in range(len(video.qualities)):
+        if video.qualities[i] == chosen_quality:
+            chosen_quality_index = i
+            break
 
     await bot.edit_message_media(
         chat_id=query.message.chat.id,
@@ -176,67 +150,45 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
             caption=f'Вы выбрали качество: {chosen_quality}'),
         reply_markup=None
     )
+
+    await asyncio.sleep(1)
     video_url = (await video[chosen_quality_index].last_url).mp4
-    if video_url is not None:
-        seconds, width_clip, height_clip = await get_video_params(video_url)
-        await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
+    seconds, width_clip, height_clip = await get_video_params(video_url)
+    await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
 
 
-# Генерация маркапов
-@dp.message_handler()
-async def main_markups():
-    markup = types.InlineKeyboardMarkup()
-
-    markup.row(
-        types.InlineKeyboardButton(text='Назад', callback_data='back'),
-        types.InlineKeyboardButton(text='Далее', callback_data='next'))
-
-    markup.row(types.InlineKeyboardButton(text='Выбрать', callback_data='select'))
-    markup.row(types.InlineKeyboardButton(text='Новый поиск', callback_data='new_search'))
-
-    return markup
-
-
-@dp.message_handler()
-async def choose_translator_markups():
-    markup = types.InlineKeyboardMarkup()
-
-    for name, id_, in player.post.translators.name_id.items():
-        if name is None:
-            markup.add(types.InlineKeyboardButton('Оригинал', callback_data='original'))
-        else:
-            markup.add(types.InlineKeyboardButton(name, callback_data=name))
-
-    markup.add(types.InlineKeyboardButton('Назад', callback_data='back2menu'))
-    return markup
-
-
-@dp.message_handler()
-async def choose_quality_markups():
-    global video
-
-    markup = types.InlineKeyboardMarkup()
-    if video is not None:
-        for i in range(len(video.qualities)):
-            markup.add(types.InlineKeyboardButton(video.qualities[i], callback_data=i))
-        markup.add(types.InlineKeyboardButton('Назад', callback_data='back2menu'))
-    else:
-        print("О��ИБКА!!!")
-    return markup
-
-
-# Методы
-async def back2menu(chat_id, message_id):
-    global film, player
-    player = await search_results[film].player
+@dp.callback_query_handler(lambda query: query.data.isdigit() and int(query.data) < len(seasons_episodes))
+async def choose_season_callback_handler(query: types.CallbackQuery):
+    chosen_season_index = int(query.data)
+    chosen_season = seasons_episodes[chosen_season_index]
 
     await bot.edit_message_media(
-        chat_id=chat_id,
-        message_id=message_id,
+        chat_id=query.message.chat.id,
+        message_id=query.message.message_id,
         media=types.InputMediaPhoto(
             media=search_results[film].poster,
-            caption=player.post.name),
-        reply_markup=markup_main)
+            caption=f'Вы выбрали сезон: {chosen_season}'),
+        reply_markup=None
+    )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 async def next_film(chat_id, message_id):
@@ -303,18 +255,81 @@ async def back_film(chat_id, message_id):
         search_results = await Search(query).get_page(page)
 
 
-async def process_film():
+async def back2menu(chat_id, message_id):
+    global film, player
+    player = await search_results[film].player
+
+    await bot.edit_message_media(
+        chat_id=chat_id,
+        message_id=message_id,
+        media=types.InputMediaPhoto(
+            media=search_results[film].poster,
+            caption=player.post.name),
+        reply_markup=markup_main)
+
+
+async def process_film(message):
     global video, player, translator_id
 
-    meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    content = meta_tag['content'].removeprefix('video.')
+    stream = await player.get_stream(translator_id)
+    video = stream.video
 
-    if content == 'movie':
-        stream = await player.get_stream(translator_id)
-        video = stream.video
-    else:
-        video = None
-        print('Это сериал, пока не работаем с сериалами')
+    try:
+        await asyncio.sleep(1)
+        choose_quality = await choose_quality_markups()
+
+        await bot.edit_message_media(
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+            media=types.InputMediaPhoto(
+                media=search_results[film].poster,
+                caption=f'Выберете качество для {player.post.name}'),
+            reply_markup=choose_quality
+        )
+    except:
+        pass
+
+
+async def process_serial(message):
+    global video, player, translator_id
+
+    try:
+        await asyncio.sleep(1)
+        choose_season = await choose_season_markups()
+
+        await bot.edit_message_media(
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+            media=types.InputMediaPhoto(
+                media=search_results[film].poster,
+                caption=f'Выберете сезон для {player.post.name}'),
+            reply_markup=choose_season
+        )
+    except:
+        pass
+
+    # seasons_episodes = await player.get_episodes()
+    # list = len(seasons_episodes)
+    # print(list)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 async def get_video_params(video_file):
@@ -372,6 +387,85 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                     os.remove(video_url_.split('/')[-1])
             else:
                 logging.error(f"Failed to download video: {response.status}")
+
+
+@dp.message_handler()
+async def main_markups():
+    markup = types.InlineKeyboardMarkup()
+
+    markup.row(
+        types.InlineKeyboardButton(text='Назад', callback_data='back'),
+        types.InlineKeyboardButton(text='Далее', callback_data='next'))
+
+    markup.row(types.InlineKeyboardButton(text='Выбрать', callback_data='select'))
+    markup.row(types.InlineKeyboardButton(text='Новый поиск', callback_data='new_search'))
+
+    return markup
+
+
+@dp.message_handler()
+async def choose_translator_markups():
+    markup = types.InlineKeyboardMarkup()
+
+    for name, id_, in player.post.translators.name_id.items():
+        if name is None:
+            markup.add(types.InlineKeyboardButton('по умолчанию', callback_data='default'))
+        else:
+            markup.add(types.InlineKeyboardButton(name, callback_data=name))
+
+    markup.add(types.InlineKeyboardButton('Назад', callback_data='back2menu'))
+
+    return markup
+
+
+@dp.message_handler()
+async def choose_season_markups():
+    global seasons_episodes, translator_id
+    markup = types.InlineKeyboardMarkup()  # Указываем ширину ряда
+
+    seasons_episodes = await player.get_episodes(translator_id=translator_id)
+    seasons = len(seasons_episodes)
+
+    for i in range(1, seasons + 1):  # Начинаем с 1 и идем до seasons включительно
+        markup.insert(types.InlineKeyboardButton(f'Сезон {i}', callback_data=i))
+
+    markup.row(
+        types.InlineKeyboardButton('Назад', callback_data='back2menu'))  # Добавляем кнопку "Назад" в отдельный ряд
+
+    return markup
+
+
+@dp.message_handler()
+async def choose_episode_markups():
+    global seasons_episodes, translator_id
+    markup = types.InlineKeyboardMarkup(row_width=5)  # Указываем ширину ряда
+
+    seasons_episodes = await player.get_episodes(translator_id=translator_id)
+    seasons = len(seasons_episodes)
+
+    for i in range(seasons):  # Начинаем с 1 и идем до seasons включительно
+        markup.insert(types.InlineKeyboardButton(f'Серия {seasons_episodes[i]}', callback_data=i))
+        print(f'seria {seasons_episodes[i]}')
+
+    markup.row(
+        types.InlineKeyboardButton('Назад', callback_data='back2menu'))  # Добавляем кнопку "Назад" в отдельный ряд
+
+    return markup
+
+
+@dp.message_handler()
+async def choose_quality_markups():
+    global video
+
+    markup = types.InlineKeyboardMarkup()
+
+    if video is not None:
+        for i in range(len(video.qualities)):
+            markup.add(types.InlineKeyboardButton(video.qualities[i], callback_data=video.qualities[i]))
+        markup.add(types.InlineKeyboardButton('Назад', callback_data='back2menu'))
+    else:
+        print("О��ИБКА!!!")
+    return markup
 
 
 if __name__ == '__main__':
