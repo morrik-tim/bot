@@ -36,7 +36,8 @@ dp.middleware.setup(LoggingMiddleware())
 @dp.message_handler(content_types=['video'])
 async def reply_video(message: types.Message):
     video_ = message.video.file_id
-    await bot.send_video(chat_id=reply_id, video=video_)
+    await bot.send_video(chat_id=reply_id, video=video_,
+                         caption=f'{player.post.name}({chosen_quality}) - {translator_name}')
 
 
 @dp.message_handler(commands=['start'])
@@ -162,7 +163,7 @@ async def translator_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data.isdigit() and int(query.data) < len(video.qualities))
 async def choose_quality_callback_handler(query: types.CallbackQuery):
-    global video_url, seconds, width_clip, height_clip, video
+    global video_url, seconds, width_clip, height_clip, video, chosen_quality
 
     chosen_quality_index = int(query.data)
     chosen_quality = video.qualities[chosen_quality_index]
@@ -176,9 +177,9 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
         reply_markup=None
     )
     video_url = (await video[chosen_quality_index].last_url).mp4
-
-    seconds, width_clip, height_clip = await get_video_params(video_url)
-    await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
+    if video_url is not None:
+        seconds, width_clip, height_clip = await get_video_params(video_url)
+        await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
 
 
 # Генерация маркапов
@@ -277,7 +278,6 @@ async def back_film(chat_id, message_id):
     if film > 0:
         film -= 1
 
-
     player = await search_results[film].player
 
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
@@ -301,6 +301,7 @@ async def back_film(chat_id, message_id):
         page -= 1
         film = 36
         search_results = await Search(query).get_page(page)
+
 
 async def process_film():
     global video, player, translator_id
@@ -358,7 +359,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                     await upload_progress_callback(pbar.n, content_length)
                     await telethon_client.send_file(
                         const_chat_id, video_url_.split('/')[-1],
-                        caption=player.post.name,
+                        caption=f'{player.post.name}({chosen_quality}) - {translator_name}',
                         supports_streaming=True,
                         use_cache=True,
                         part_size_kb=8192,
