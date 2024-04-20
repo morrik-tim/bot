@@ -49,13 +49,14 @@ async def start(message: types.Message):
 
 @dp.message_handler(content_types=['text'])
 async def main(message: types.Message):
-    global player, search_results, film, markup_main, page, reply_id, del_msg_id
+    global player, search_results, film, markup_main, page, reply_id, del_msg_id, query
 
     reply_id = message.chat.id
+    query = message.text
     film = 0
     page = 1
 
-    search_results = await Search(message.text).get_page(page)
+    search_results = await Search(query).get_page(page)
     player = await search_results[film].player
 
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
@@ -238,9 +239,16 @@ async def back2menu(chat_id, message_id):
 
 
 async def next_film(chat_id, message_id):
-    global film, player
+    global film, player, page, query, search_results
     results = len(search_results)
 
+    try:
+        if film == results - 1 and results >= 36:
+            page += 1
+            film = -1
+            search_results = await Search(query).get_page(page)
+    except:
+        pass
     if film < results - 1:
         film += 1
 
@@ -252,20 +260,23 @@ async def next_film(chat_id, message_id):
     print(f'Название - {player.post.name}')
     print(f'Тип контента - {content}')
 
-    await bot.edit_message_media(
-        chat_id=chat_id,
-        message_id=message_id,
-        media=types.InputMediaPhoto(
-            media=search_results[film].poster,
-            caption=player.post.name),
-        reply_markup=markup_main)
+    try:
+        await bot.edit_message_media(
+            chat_id=chat_id,
+            message_id=message_id,
+            media=types.InputMediaPhoto(
+                media=search_results[film].poster,
+                caption=player.post.name),
+            reply_markup=markup_main)
+    except:
+        pass
 
 
 async def back_film(chat_id, message_id):
-    global film, player
-
+    global film, player, page, query, search_results
     if film > 0:
         film -= 1
+
 
     player = await search_results[film].player
 
@@ -275,14 +286,21 @@ async def back_film(chat_id, message_id):
     print(f'Название - {player.post.name}')
     print(f'Тип контента - {content}')
 
-    await bot.edit_message_media(
-        chat_id=chat_id,
-        message_id=message_id,
-        media=types.InputMediaPhoto(
-            media=search_results[film].poster,
-            caption=player.post.name),
-        reply_markup=markup_main)
+    try:
+        await bot.edit_message_media(
+            chat_id=chat_id,
+            message_id=message_id,
+            media=types.InputMediaPhoto(
+                media=search_results[film].poster,
+                caption=player.post.name),
+            reply_markup=markup_main)
+    except:
+        pass
 
+    if page > 1 and film == 0:
+        page -= 1
+        film = 36
+        search_results = await Search(query).get_page(page)
 
 async def process_film():
     global video, player, translator_id
