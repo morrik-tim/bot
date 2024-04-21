@@ -159,8 +159,12 @@ async def choose_episode_callback_handler(query: types.CallbackQuery):
     global video, episode_number
     episode_number = int(query.data.split('_')[1])
 
-    stream = await player.get_stream(season=season_number, episode=episode_number, translator_id=translator_id)
-    video = stream.video
+    await asyncio.sleep(1)
+    try:
+        stream = await player.get_stream(season=season_number, episode=episode_number, translator_id=translator_id)
+        video = stream.video
+    except:
+        pass
 
     choose_quality = await choose_quality_markups()
 
@@ -189,6 +193,7 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content = meta_tag['content'].removeprefix('video.')
 
+    await asyncio.sleep(1)
     if content == 'movie':
         await bot.edit_message_media(
             chat_id=query.message.chat.id,
@@ -300,8 +305,12 @@ async def back2menu(chat_id, message_id):
 async def process_film(message):
     global video, player, translator_id
 
-    stream = await player.get_stream(translator_id)
-    video = stream.video
+    await asyncio.sleep(1)
+    try:
+        stream = await player.get_stream(translator_id)
+        video = stream.video
+    except:
+        pass
 
     try:
         await asyncio.sleep(1)
