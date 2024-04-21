@@ -37,7 +37,8 @@ dp.middleware.setup(LoggingMiddleware())
 async def reply_video(message: types.Message):
     video_ = message.video.file_id
     await bot.send_video(chat_id=reply_id, video=video_,
-                         caption=f'{player.post.name}({chosen_quality}) - {translator_name}')
+                         caption=f'{player.post.name} - {search_results[film].info}({chosen_quality})\n'
+                                 f'{translator_name}, {season_number}, {episode_number}')
 
 
 @dp.message_handler(commands=['start'])
@@ -70,7 +71,8 @@ async def main(message: types.Message):
 
     markup_main = await main_markups()
 
-    await message.answer_photo(search_results[film].poster, player.post.name, reply_markup=markup_main)
+    await message.answer_photo(search_results[film].poster, caption=f'{player.post.name} - {search_results[film].info}',
+                               reply_markup=markup_main)
 
 
 @dp.callback_query_handler(lambda query: query.data == 'select')
@@ -82,7 +84,8 @@ async def select_callback_handler(query: types.CallbackQuery):
         message_id=query.message.message_id,
         media=types.InputMediaPhoto(
             media=search_results[film].poster,
-            caption=f'Выберите озвучку для {player.post.name}'),
+            caption=f'Выберите озвучку\n\n'
+                    f'{player.post.name} - {search_results[film].info}'),
         reply_markup=choose_markup
     )
 
@@ -143,14 +146,17 @@ async def choose_season_callback_handler(query: types.CallbackQuery):
         message_id=query.message.message_id,
         media=types.InputMediaPhoto(
             media=search_results[film].poster,
-            caption=f'Выберите серию для {player.post.name}'),
+            caption=f'Озвучка - {translator_name}, '
+                    f'Сезон - {season_number}\n '
+                    f'Выберите серию\n\n'
+                    f'{player.post.name} - {search_results[film].info}'),
         reply_markup=chose_episode
     )
 
 
 @dp.callback_query_handler(lambda query: query.data.startswith('episode_'))
 async def choose_episode_callback_handler(query: types.CallbackQuery):
-    global video
+    global video, episode_number
     episode_number = int(query.data.split('_')[1])
 
     stream = await player.get_stream(season=season_number, episode=episode_number, translator_id=translator_id)
@@ -163,29 +169,50 @@ async def choose_episode_callback_handler(query: types.CallbackQuery):
         message_id=query.message.message_id,
         media=types.InputMediaPhoto(
             media=search_results[film].poster,
-            caption=f'Вы выбрали серию: {episode_number}'),
+            caption=f'Озвучка - {translator_name}, '
+                    f'Сезон - {season_number}, '
+                    f'Серия {episode_number}\n\n'
+                    f'{player.post.name} - {search_results[film].info}'),
         reply_markup=choose_quality
     )
 
 
 @dp.callback_query_handler(lambda query: query.data in video.qualities)
 async def choose_quality_callback_handler(query: types.CallbackQuery):
-    global video_url, seconds, width_clip, height_clip, video, chosen_quality, chosen_quality_index, player
+    global video_url, seconds, width_clip, height_clip, video, chosen_quality, chosen_quality_index, player, search_results, film, episode_number
 
     chosen_quality = query.data
     for i in range(len(video.qualities)):
         if video.qualities[i] == chosen_quality:
             chosen_quality_index = i
             break
+    meta_tag = player.post._soup_inst.find('meta', property='og:type')
+    content = meta_tag['content'].removeprefix('video.')
 
-    await bot.edit_message_media(
-        chat_id=query.message.chat.id,
-        message_id=query.message.message_id,
-        media=types.InputMediaPhoto(
-            media=search_results[film].poster,
-            caption=f'Вы выбрали качество {chosen_quality} для {player.post.name}'),
-        reply_markup=None
-    )
+    if content == 'movie':
+        await bot.edit_message_media(
+            chat_id=query.message.chat.id,
+            message_id=query.message.message_id,
+            media=types.InputMediaPhoto(
+                media=search_results[film].poster,
+                caption=f'Озвучка - {translator_name}, '
+                        f'Качество - {chosen_quality}'
+                        f'\n\n{player.post.name} - {search_results[film].info}'),
+            reply_markup=None
+        )
+    else:
+        await bot.edit_message_media(
+            chat_id=query.message.chat.id,
+            message_id=query.message.message_id,
+            media=types.InputMediaPhoto(
+                media=search_results[film].poster,
+                caption=f'Озвучка - {translator_name}, '
+                        f'Сезон - {season_number}, '
+                        f'Серия {episode_number}, '
+                        f'Качество - {chosen_quality}'
+                        f'\n\n{player.post.name} - {search_results[film].info}'),
+            reply_markup=None
+        )
 
     await asyncio.sleep(1)
     video_url = (await video[chosen_quality_index].last_url).mp4
@@ -221,7 +248,7 @@ async def next_film(chat_id, message_id):
             message_id=message_id,
             media=types.InputMediaPhoto(
                 media=search_results[film].poster,
-                caption=player.post.name),
+                caption=f'{player.post.name} - {search_results[film].info}'),
             reply_markup=markup_main)
     except:
         pass
@@ -246,7 +273,7 @@ async def back_film(chat_id, message_id):
             message_id=message_id,
             media=types.InputMediaPhoto(
                 media=search_results[film].poster,
-                caption=player.post.name),
+                caption=f'{player.post.name} - {search_results[film].info}'),
             reply_markup=markup_main)
     except:
         pass
@@ -266,7 +293,7 @@ async def back2menu(chat_id, message_id):
         message_id=message_id,
         media=types.InputMediaPhoto(
             media=search_results[film].poster,
-            caption=player.post.name),
+            caption=f'{player.post.name} - {search_results[film].info}'),
         reply_markup=markup_main)
 
 
@@ -285,7 +312,9 @@ async def process_film(message):
             message_id=message.message_id,
             media=types.InputMediaPhoto(
                 media=search_results[film].poster,
-                caption=f'Выберете качество для {player.post.name}'),
+                caption=f'Озвучка - {translator_name}'
+                        f'\nВыберете качество'
+                        f'\n\n {player.post.name} - {search_results[film].info}'),
             reply_markup=choose_quality
         )
     except:
@@ -304,7 +333,9 @@ async def process_serial(message):
             message_id=message.message_id,
             media=types.InputMediaPhoto(
                 media=search_results[film].poster,
-                caption=f'Выберете сезон для {player.post.name}'),
+                caption=f'Озвучка - {translator_name}\n'
+                        f'Выберете сезон'
+                        f'\n\n{player.post.name} - {search_results[film].info}'),
             reply_markup=choose_season
         )
     except:
@@ -333,6 +364,7 @@ async def upload_progress_callback(current, total):
 
 
 async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
+    global search_results
     const_chat_id = -1002112068525
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
     async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -351,16 +383,38 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                     pbar.close()
                     await bot.send_message(chat_id, 'Загрузка завершилась, началась отправка!')
                     await upload_progress_callback(pbar.n, content_length)
-                    await telethon_client.send_file(
-                        const_chat_id, video_url_.split('/')[-1],
-                        caption=f'{player.post.name}({chosen_quality}) - {translator_name}',
-                        supports_streaming=True,
-                        use_cache=True,
-                        part_size_kb=8192,
-                        attributes=[DocumentAttributeVideo(seconds_, width_clip_, height_clip_)],
-                        progress_callback=upload_progress_callback,
-                        file_size=content_length
-                    )
+
+                    preload_prefix_size = int(0.05 * content_length)
+                    meta_tag = player.post._soup_inst.find('meta', property='og:type')
+                    content = meta_tag['content'].removeprefix('video.')
+
+                    if content == 'movie':
+                        await telethon_client.send_file(
+                            const_chat_id, video_url_.split('/')[-1],
+                            caption=f'{player.post.name} - {search_results[film].info}({chosen_quality}) - {translator_name}',
+                            supports_streaming=True,
+                            use_cache=True,
+                            part_size_kb=8192,
+                            attributes=[
+                                DocumentAttributeVideo(seconds_, width_clip_, height_clip_, supports_streaming=True,
+                                                       preload_prefix_size=preload_prefix_size)],
+                            progress_callback=upload_progress_callback,
+                            file_size=content_length
+                        )
+                    else:
+                        await telethon_client.send_file(
+                            const_chat_id, video_url_.split('/')[-1],
+                            caption=f'{player.post.name} - {search_results[film].info}({chosen_quality})\n'
+                                    f'{translator_name}, {season_number}, {episode_number}',
+                            supports_streaming=True,
+                            use_cache=True,
+                            part_size_kb=8192,
+                            attributes=[
+                                DocumentAttributeVideo(seconds_, width_clip_, height_clip_, supports_streaming=True,
+                                                       preload_prefix_size=preload_prefix_size)],
+                            progress_callback=upload_progress_callback,
+                            file_size=content_length
+                        )
                     logging.info("Видео отправлено!")
 
                     os.remove(video_url_.split('/')[-1])
