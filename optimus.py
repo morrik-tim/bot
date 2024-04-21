@@ -245,7 +245,7 @@ async def next_film(chat_id, message_id):
     content_type_ = meta_tag['content'].removeprefix('video.')
 
     print(f'Название - {player.post.name}')
-    print(f'Тип контента - {content}')
+    print(f'Тип контента - {content_type_}')
 
     try:
         await bot.edit_message_media(
@@ -270,7 +270,7 @@ async def back_film(chat_id, message_id):
     content_type_ = meta_tag['content'].removeprefix('video.')
 
     print(f'Название - {player.post.name}')
-    print(f'Тип контента - {content}')
+    print(f'Тип контента - {content_type_}')
 
     try:
         await bot.edit_message_media(
