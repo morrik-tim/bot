@@ -116,7 +116,7 @@ async def back_callback_handler(query: types.CallbackQuery):
 @dp.callback_query_handler(
     lambda query: query.data in player.post.translators.name_id.keys() or query.data == 'default')
 async def translator_callback_handler(query: types.CallbackQuery):
-    global translator_id, choose_quality, video, player, translator_name
+    global translator_id, translator_name
 
     if query.data == 'default':
         translator_name = query.data
@@ -136,7 +136,7 @@ async def translator_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data.startswith('season_'))
 async def choose_season_callback_handler(query: types.CallbackQuery):
-    global season_number, player
+    global season_number, chose_episode
 
     season_number = int(query.data.split('_')[1])  # Получаем номер сезона из callback_data
     chose_episode = await choose_episode_markups()
@@ -156,7 +156,7 @@ async def choose_season_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data.startswith('episode_'))
 async def choose_episode_callback_handler(query: types.CallbackQuery):
-    global video, episode_number
+    global video, stream, episode_number
     episode_number = int(query.data.split('_')[1])
 
     await asyncio.sleep(1)
@@ -183,7 +183,7 @@ async def choose_episode_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data in video.qualities)
 async def choose_quality_callback_handler(query: types.CallbackQuery):
-    global video_url, seconds, width_clip, height_clip, video, chosen_quality, chosen_quality_index, player, search_results, film, episode_number
+    global chosen_quality, chosen_quality_index
 
     chosen_quality = query.data
     for i in range(len(video.qualities)):
@@ -226,7 +226,7 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
 
 
 async def next_film(chat_id, message_id):
-    global film, player, page, query, search_results
+    global film, player, page, search_results
     results = len(search_results)
 
     try:
@@ -260,7 +260,7 @@ async def next_film(chat_id, message_id):
 
 
 async def back_film(chat_id, message_id):
-    global film, player, page, query, search_results
+    global film, player, page, search_results
     if film > 0:
         film -= 1
 
@@ -290,7 +290,7 @@ async def back_film(chat_id, message_id):
 
 
 async def back2menu(chat_id, message_id):
-    global film, player
+    global player
     player = await search_results[film].player
 
     await bot.edit_message_media(
@@ -303,7 +303,7 @@ async def back2menu(chat_id, message_id):
 
 
 async def process_film(message):
-    global video, player, translator_id
+    global video, stream, choose_quality
 
     await asyncio.sleep(1)
     try:
@@ -331,7 +331,7 @@ async def process_film(message):
 
 
 async def process_serial(message):
-    global player, translator_id
+    global choose_season
 
     try:
         await asyncio.sleep(1)
@@ -373,7 +373,8 @@ async def upload_progress_callback(current, total):
 
 
 async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
-    global search_results
+    global const_chat_id
+
     const_chat_id = -1002112068525
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
     async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -462,7 +463,7 @@ async def choose_translator_markups():
 
 @dp.message_handler()
 async def choose_season_markups():
-    global seasons_episodes, translator_id, seasons
+    global seasons_episodes, seasons
 
     markup = types.InlineKeyboardMarkup()
 
@@ -478,12 +479,12 @@ async def choose_season_markups():
 
 @dp.message_handler()
 async def choose_episode_markups():
-    global seasons, translator_id, season_number, seasons_episodes, num, scam
+    global series_
     markup = types.InlineKeyboardMarkup()  # Указываем ширину ряда
 
-    scam = len(seasons_episodes[season_number])
+    series_ = len(seasons_episodes[season_number])
 
-    for i in range(1, scam + 1):
+    for i in range(1, series_ + 1):
         markup.insert(types.InlineKeyboardButton(f'Серия {i}', callback_data=f'episode_{i}'))
     markup.add(types.InlineKeyboardButton('Назад', callback_data='back2menu'))
 
@@ -492,8 +493,6 @@ async def choose_episode_markups():
 
 @dp.message_handler()
 async def choose_quality_markups():
-    global video, ser
-
     markup = types.InlineKeyboardMarkup()
 
     for i in range(len(video.qualities)):
