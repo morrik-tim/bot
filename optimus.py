@@ -5,6 +5,7 @@ import random
 import datetime
 import aiofiles
 import aiohttp
+import cv2
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
@@ -351,12 +352,44 @@ async def process_serial(message):
         pass
 
 
+# async def get_video_params(video_file):
+#     clip = VideoFileClip(video_file)
+#
+#     seconds__ = clip.duration
+#     width_clip__ = clip.w
+#     height_clip__ = clip.h
+#     clip.close()
+#
+#     return seconds__, width_clip__, height_clip__
 async def get_video_params(video_file):
-    clip = VideoFileClip(video_file)
-    seconds__ = clip.duration
-    width_clip__ = clip.w
-    height_clip__ = clip.h
-    clip.close()
+    cap = cv2.VideoCapture(video_file)
+
+    if not cap.isOpened():
+        # Обработка ошибки открытия видеофайла
+        print('Ошибка открытия видеофайла')
+        return None, None, None
+
+    # Получение общего количества кадров и FPS
+    frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+
+    # Перематываем видео к началу, чтобы получить размеры кадра
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    ret, frame = cap.read()
+
+    if not ret:
+        # Обработка ошибки чтения кадра
+        return None, None, None
+
+    # Получение размеров кадра
+    height_clip__, width_clip__ = frame.shape[:2]
+
+    # Расчет длительности видео в секундах
+    seconds__ = frames / fps
+
+    # Закрытие видеофайла
+    cap.release()
+
     return seconds__, width_clip__, height_clip__
 
 
