@@ -38,8 +38,7 @@ dp.middleware.setup(LoggingMiddleware())
 async def reply_video(message: types.Message):
     video_ = message.video.file_id
     await bot.send_video(chat_id=reply_id, video=video_,
-                         caption=f'{player.post.name} - {search_results[film].info}({chosen_quality})\n'
-                                 f'{translator_name}, {season_number}, {episode_number}')
+                         caption=f'{player.post.name} - {search_results[film].info}({chosen_quality})\n{translator_name}, {season_number}, {episode_number}')
 
 
 @dp.message_handler(commands=['start'])
