@@ -37,8 +37,13 @@ dp.middleware.setup(LoggingMiddleware())
 @dp.message_handler(content_types=['video'])
 async def reply_video(message: types.Message):
     video_ = message.video.file_id
-    await bot.send_video(chat_id=reply_id, video=video_,
-                         caption=f'{player.post.name} - {search_results[film].info}({chosen_quality})\n{translator_name}, {season_number}, {episode_number}')
+    if content_type_ == "movie":
+        await bot.send_video(chat_id=reply_id, video=video_,
+                             caption=f'{player.post.name} - {search_results[film].info}({chosen_quality})')
+    else:
+        await bot.send_video(chat_id=reply_id, video=video_,
+                             caption=f'{player.post.name} - {search_results[film].info}({chosen_quality})\n'
+                                     f'{translator_name}, {season_number}, {episode_number}')
 
 
 @dp.message_handler(commands=['start'])
@@ -51,7 +56,7 @@ async def start(message: types.Message):
 
 @dp.message_handler(content_types=['text'])
 async def main(message: types.Message):
-    global player, search_results, film, markup_main, page, reply_id, del_msg_id, query
+    global player, search_results, film, markup_main, page, reply_id, del_msg_id, query, content_type_
 
     reply_id = message.chat.id
     query = message.text
@@ -62,10 +67,10 @@ async def main(message: types.Message):
     player = await search_results[film].player
 
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    content = meta_tag['content'].removeprefix('video.')
+    content_type_ = meta_tag['content'].removeprefix('video.')
 
     print(f'Название - {player.post.name}')
-    print(f'Тип контента - {content}')
+    print(f'Тип контента - {content_type_}')
 
     del_msg_id = message.message_id
 
@@ -125,10 +130,7 @@ async def translator_callback_handler(query: types.CallbackQuery):
         translator_name = query.data
         translator_id = player.post.translators.name_id[translator_name]  # id'shnik
 
-    meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    content = meta_tag['content'].removeprefix('video.')
-
-    if content == 'movie':
+    if content_type_ == 'movie':
         await process_film(query.message)
     else:
         await process_serial(query.message)
@@ -190,11 +192,9 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
         if video.qualities[i] == chosen_quality:
             chosen_quality_index = i
             break
-    meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    content = meta_tag['content'].removeprefix('video.')
 
     await asyncio.sleep(1)
-    if content == 'movie':
+    if content_type_ == 'movie':
         await bot.edit_message_media(
             chat_id=query.message.chat.id,
             message_id=query.message.message_id,
@@ -226,7 +226,7 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
 
 
 async def next_film(chat_id, message_id):
-    global film, player, page, search_results
+    global film, player, page, search_results, content_type_
     results = len(search_results)
 
     try:
@@ -242,7 +242,7 @@ async def next_film(chat_id, message_id):
     player = await search_results[film].player
 
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    content = meta_tag['content'].removeprefix('video.')
+    content_type_ = meta_tag['content'].removeprefix('video.')
 
     print(f'Название - {player.post.name}')
     print(f'Тип контента - {content}')
@@ -260,14 +260,14 @@ async def next_film(chat_id, message_id):
 
 
 async def back_film(chat_id, message_id):
-    global film, player, page, search_results
+    global film, player, page, search_results, content_type_
     if film > 0:
         film -= 1
 
     player = await search_results[film].player
 
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    content = meta_tag['content'].removeprefix('video.')
+    content_type_ = meta_tag['content'].removeprefix('video.')
 
     print(f'Название - {player.post.name}')
     print(f'Тип контента - {content}')
@@ -427,10 +427,8 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                     await upload_progress_callback(pbar.n, content_length)
 
                     preload_prefix_size = int(0.05 * content_length)
-                    meta_tag = player.post._soup_inst.find('meta', property='og:type')
-                    content = meta_tag['content'].removeprefix('video.')
 
-                    if content == 'movie':
+                    if content_type_ == 'movie':
                         await telethon_client.send_file(
                             const_chat_id, video_url_.split('/')[-1],
                             caption=f'{player.post.name} - {search_results[film].info}({chosen_quality}) - {translator_name}',
