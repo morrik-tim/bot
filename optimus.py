@@ -35,6 +35,20 @@ dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
 
+# class Variables:
+#     def __init__(self):
+#         self.reply_id = None
+#         self.query = None
+#         self.film = 0
+#         self.page = 1
+#         self.player = None
+#         self.search_results = None
+#         self.content_type = None
+#
+#
+# var = Variables()
+
+
 @dp.message_handler(content_types=['video'])
 async def reply_video(message: types.Message):
     video_ = message.video.file_id
