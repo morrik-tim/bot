@@ -3,6 +3,5 @@
 /.idea/
 /anon.session
 /anon.session-journal
-/.env
 /*.mp4
 /log.log
