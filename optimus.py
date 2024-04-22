@@ -1,20 +1,16 @@
 import asyncio
+import datetime
 import logging
 import os
-import random
-import datetime
+
 import aiofiles
 import aiohttp
-import sys
 import cv2
-import logging
-
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.utils import executor
 from dotenv import load_dotenv, find_dotenv
 from hdrezka import Search
-from moviepy.editor import VideoFileClip
 from telethon import TelegramClient
 from telethon.tl.types import DocumentAttributeVideo
 from tqdm import tqdm
@@ -31,14 +27,12 @@ PASSWORD = os.getenv("PASSWORD")
 formatter = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 logging.basicConfig(filename='log.log', level=logging.DEBUG, format=formatter)
 
-
 telethon_client = TelegramClient('anon', API_ID, API_HASH)
 telethon_client.start(phone=PHONE, password=PASSWORD)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
-
 
 
 @dp.message_handler(content_types=['video'])
@@ -76,14 +70,19 @@ async def main(message: types.Message):
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content_type_ = meta_tag['content'].removeprefix('video.')
 
+    if content_type_ == "movie":
+        emoji = '📺📼'
+    else:
+        emoji = '📺🎞'
+
     print(f'Запрос - {query}\n'
           f'Название - {player.post.name} - {search_results[film].info}\n'
           f'Тип контента - {content_type_}')
 
-
     markup_main = await main_markups()
 
-    await message.answer_photo(search_results[film].poster, caption=f'{player.post.name} - {search_results[film].info}',
+    await message.answer_photo(search_results[film].poster,
+                               caption=f'{player.post.name}{emoji} - {search_results[film].info}',
                                reply_markup=markup_main)
 
 
