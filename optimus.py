@@ -63,7 +63,7 @@ async def start(message: types.Message):
 
 @dp.message_handler(content_types=['text'])
 async def main(message: types.Message):
-    global player, search_results, film, markup_main, page, reply_id, del_msg_id, query, content_type_
+    global player, search_results, film, markup_main, page, reply_id, query, content_type_
 
     reply_id = message.chat.id
     query = message.text
@@ -76,10 +76,10 @@ async def main(message: types.Message):
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content_type_ = meta_tag['content'].removeprefix('video.')
 
-    print(f'Название - {player.post.name}')
-    print(f'Тип контента - {content_type_}')
+    print(f'Запрос - {query}\n'
+          f'Название - {player.post.name} - {search_results[film].info}\n'
+          f'Тип контента - {content_type_}')
 
-    del_msg_id = message.message_id
 
     markup_main = await main_markups()
 
