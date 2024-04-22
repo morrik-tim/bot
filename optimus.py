@@ -23,7 +23,6 @@ PHONE = os.getenv("PHONE")
 TOKEN = os.getenv("TOKEN")
 PASSWORD = os.getenv("PASSWORD")
 
-# logging.basicConfig(filename="log.log", level=logging.DEBUG)
 formatter = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 logging.basicConfig(filename='log.log', level=logging.DEBUG, format=formatter)
 
@@ -52,12 +51,18 @@ dp.middleware.setup(LoggingMiddleware())
 @dp.message_handler(content_types=['video'])
 async def reply_video(message: types.Message):
     video_ = message.video.file_id
+
+    meta_tag = player.post._soup_inst.find('meta', property='og:type')
+    content_type_ = meta_tag['content'].removeprefix('video.')
+
     if content_type_ == "movie":
+        emoji = "📺📼"
         await bot.send_video(chat_id=reply_id, video=video_,
-                             caption=f'{player.post.name} - {search_results[film].info}({chosen_quality})')
+                             caption=f'{player.post.name}{emoji} - {search_results[film].info}({chosen_quality})')
     else:
+        emoji = "📺🎞"
         await bot.send_video(chat_id=reply_id, video=video_,
-                             caption=f'{player.post.name} - {search_results[film].info}({chosen_quality})\n'
+                             caption=f'{player.post.name}{emoji} - {search_results[film].info}({chosen_quality})\n'
                                      f'{translator_name}, {season_number}, {episode_number}')
 
 
@@ -85,16 +90,10 @@ async def main(message: types.Message):
     content_type_ = meta_tag['content'].removeprefix('video.')
 
     if content_type_ == "movie":
-        emoji = '📺📼'
+        emoji = "📺📼"
     else:
-        emoji = '📺🎞'
-
-    print(f'Запрос - {query}\n'
-          f'Название - {player.post.name} - {search_results[film].info}\n'
-          f'Тип контента - {content_type_}')
-
+        emoji = "📺🎞"
     markup_main = await main_markups()
-
     await message.answer_photo(search_results[film].poster,
                                caption=f'{player.post.name}{emoji} - {search_results[film].info}',
                                reply_markup=markup_main)
@@ -264,16 +263,17 @@ async def next_film(chat_id, message_id):
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content_type_ = meta_tag['content'].removeprefix('video.')
 
-    print(f'Название - {player.post.name} - {search_results[film].info}')
-    print(f'Тип контента - {content_type_}')
-
+    if content_type_ == "movie":
+        emoji = "📺📼"
+    else:
+        emoji = "📺🎞"
     try:
         await bot.edit_message_media(
             chat_id=chat_id,
             message_id=message_id,
             media=types.InputMediaPhoto(
                 media=search_results[film].poster,
-                caption=f'{player.post.name} - {search_results[film].info}'),
+                caption=f'{player.post.name}{emoji} - {search_results[film].info}'),
             reply_markup=markup_main)
     except:
         pass
@@ -289,16 +289,17 @@ async def back_film(chat_id, message_id):
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content_type_ = meta_tag['content'].removeprefix('video.')
 
-    print(f'Название - {player.post.name} - {search_results[film].info}')
-    print(f'Тип контента - {content_type_}')
-
+    if content_type_ == "movie":
+        emoji = "📺📼"
+    else:
+        emoji = "📺🎞"
     try:
         await bot.edit_message_media(
             chat_id=chat_id,
             message_id=message_id,
             media=types.InputMediaPhoto(
                 media=search_results[film].poster,
-                caption=f'{player.post.name} - {search_results[film].info}'),
+                caption=f'{player.post.name}{emoji} - {search_results[film].info}'),
             reply_markup=markup_main)
     except:
         pass
