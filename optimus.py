@@ -540,5 +540,5 @@ async def choose_quality_markups():
 
 
 if __name__ == '__main__':
-    print(f'Starting bot {bot_token}')
+    print(f'Starting bot')
     executor.start_polling(dp, skip_updates=True)
