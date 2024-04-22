@@ -5,7 +5,9 @@ import random
 import datetime
 import aiofiles
 import aiohttp
+import sys
 import cv2
+import logging
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
@@ -25,13 +27,18 @@ PHONE = os.getenv("PHONE")
 TOKEN = os.getenv("TOKEN")
 PASSWORD = os.getenv("PASSWORD")
 
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(filename="log.log", level=logging.DEBUG)
+formatter = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+logging.basicConfig(filename='log.log', level=logging.DEBUG, format=formatter)
+
+
 telethon_client = TelegramClient('anon', API_ID, API_HASH)
 telethon_client.start(phone=PHONE, password=PASSWORD)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
+
 
 
 @dp.message_handler(content_types=['video'])
