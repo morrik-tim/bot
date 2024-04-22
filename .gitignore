@@ -5,3 +5,4 @@
 /anon.session-journal
 /*.mp4
 /log.log
+/.env
