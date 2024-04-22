@@ -251,7 +251,7 @@ async def next_film(chat_id, message_id):
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content_type_ = meta_tag['content'].removeprefix('video.')
 
-    print(f'Название - {player.post.name}')
+    print(f'Название - {player.post.name} - {search_results[film].info}')
     print(f'Тип контента - {content_type_}')
 
     try:
@@ -276,7 +276,7 @@ async def back_film(chat_id, message_id):
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content_type_ = meta_tag['content'].removeprefix('video.')
 
-    print(f'Название - {player.post.name}')
+    print(f'Название - {player.post.name} - {search_results[film].info}')
     print(f'Тип контента - {content_type_}')
 
     try:
