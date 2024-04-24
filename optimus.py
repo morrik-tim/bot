@@ -2,10 +2,10 @@ import asyncio
 import datetime
 import logging
 import os
-
 import aiofiles
 import aiohttp
 import cv2
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.utils import executor
@@ -24,7 +24,7 @@ TOKEN = os.getenv("TOKEN")
 PASSWORD = os.getenv("PASSWORD")
 
 formatter = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-# logging.basicConfig(filename='log.log', level=logging.DEBUG, format=formatter)
+logging.basicConfig(level=logging.INFO, format=formatter)
 
 telethon_client = TelegramClient('anon', API_ID, API_HASH)
 telethon_client.start(phone=PHONE, password=PASSWORD)
@@ -52,20 +52,13 @@ dp.middleware.setup(LoggingMiddleware())
 async def reply_video(message: types.Message):
     video_ = message.video.file_id
 
-    meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    content_type_ = meta_tag['content'].removeprefix('video.')
-
-    if content_type_ == "movie":
-        await bot.send_video(chat_id=reply_id, video=video_, caption=cap_tion)
-    else:
-        await bot.send_video(chat_id=reply_id, video=video_, caption=cap_tion)
+    await bot.send_video(chat_id=reply_id, video=video_, caption=cap_tion)
 
 
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
     global reply_id
     await message.answer("Введите название фильма или сериала.")
-    logging.info(f"Chat ID: {message.chat.id}")
     reply_id = message.chat.id
 
 
@@ -88,6 +81,7 @@ async def main(message: types.Message):
         emoji = "📺📼"
     else:
         emoji = "📺🎞"
+
     markup_main = await main_markups()
     await message.answer_photo(search_results[film].poster,
                                caption=f'{emoji} {player.post.name}- {search_results[film].info}',
@@ -96,21 +90,16 @@ async def main(message: types.Message):
 
 @dp.callback_query_handler(lambda query: query.data == 'select')
 async def select_callback_handler(query: types.CallbackQuery):
-    choose_markup = await choose_translator_markups()
-
     if content_type_ == "movie":
         emoji = "📺📼"
     else:
         emoji = "📺🎞"
-    await bot.edit_message_media(
-        chat_id=query.message.chat.id,
-        message_id=query.message.message_id,
-        media=types.InputMediaPhoto(
-            media=search_results[film].poster,
-            caption=f'Выберите озвучку\n\n'
-                    f'{emoji} {player.post.name}- {search_results[film].info}'),
-        reply_markup=choose_markup
-    )
+
+    txt = f'Выберите озвучку\n\n{emoji} {player.post.name}- {search_results[film].info}'
+    photo = search_results[film].poster
+    choose_markup = await choose_translator_markups()
+
+    await bot_edit_msg(query.message, txt, photo, choose_markup)
 
 
 @dp.callback_query_handler(lambda query: query.data == 'new_search')
@@ -120,13 +109,13 @@ async def new_search_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data == 'next')
 async def next_callback_handler(query: types.CallbackQuery):
-    await next_film(query.message.chat.id, query.message.message_id)
+    await next_film(query, query.message.message_id)
     await asyncio.sleep(1)
 
 
 @dp.callback_query_handler(lambda query: query.data == 'back')
 async def back_callback_handler(query: types.CallbackQuery):
-    await back_film(query.message.chat.id, query.message.message_id)
+    await back_film(query)
     await asyncio.sleep(1)
 
 
@@ -141,6 +130,8 @@ async def back_callback_handler(query: types.CallbackQuery):
 async def translator_callback_handler(query: types.CallbackQuery):
     global translator_id, translator_name
 
+    # translator_name = query.data
+
     if query.data == 'default':
         translator_name = query.data
         translator_id = None
@@ -149,9 +140,9 @@ async def translator_callback_handler(query: types.CallbackQuery):
         translator_id = player.post.translators.name_id[translator_name]  # id'shnik
 
     if content_type_ == 'movie':
-        await process_film(query.message)
+        await process_film(query)
     else:
-        await process_serial(query.message)
+        await process_serial(query)
 
 
 @dp.callback_query_handler(lambda query: query.data.startswith('season_'))
@@ -166,22 +157,14 @@ async def choose_season_callback_handler(query: types.CallbackQuery):
     else:
         emoji = "📺🎞"
 
-    await bot.edit_message_media(
-        chat_id=query.message.chat.id,
-        message_id=query.message.message_id,
-        media=types.InputMediaPhoto(
-            media=search_results[film].poster,
-            caption=f'Озвучка - {translator_name}, '
-                    f'Сезон - {season_number}\n '
-                    f'Выберите серию\n\n'
-                    f'{emoji} {player.post.name}- {search_results[film].info}'),
-        reply_markup=chose_episode
-    )
+    txt = f'Озвучка - {translator_name}\n Сезон - {season_number}\n\nВыберите серию\n\n{emoji} {player.post.name} - {search_results[film].info}'
+    photo = search_results[film].poster
+    await bot_edit_msg(query.message, txt, photo, chose_episode)
 
 
 @dp.callback_query_handler(lambda query: query.data.startswith('episode_'))
 async def choose_episode_callback_handler(query: types.CallbackQuery):
-    global video, stream, episode_number
+    global video, stream, episode_number, choose_quality
     episode_number = int(query.data.split('_')[1])
 
     await asyncio.sleep(1)
@@ -191,31 +174,22 @@ async def choose_episode_callback_handler(query: types.CallbackQuery):
     except:
         pass
 
+    if content_type_ == "movie":
+        emoji = '📺📼'
+
+    else:
+        emoji = '📺🎞'
+
+    txt = f'Озвучка - {translator_name}\n Сезон - {season_number}\nСерия {episode_number}\n\nВыбирите качество\n\n{emoji} {player.post.name} - {search_results[film].info}'
+    photo = search_results[film].poster
     choose_quality = await choose_quality_markups()
 
-    if content_type_ == "movie":
-        emoji = "📺📼"
-    else:
-        emoji = "📺🎞"
-
-    await bot.edit_message_media(
-        chat_id=query.message.chat.id,
-        message_id=query.message.message_id,
-        media=types.InputMediaPhoto(
-            media=search_results[film].poster,
-            caption=f'Озвучка - {translator_name}, '
-                    f'Сезон - {season_number}, '
-                    f'Серия {episode_number}\n\n'
-                    f'{emoji} {player.post.name}- {search_results[film].info}'),
-        reply_markup=choose_quality
-    )
+    await bot_edit_msg(query.message, txt, photo, choose_quality)
 
 
 @dp.callback_query_handler(lambda query: query.data in video.qualities)
 async def choose_quality_callback_handler(query: types.CallbackQuery):
-    global chosen_quality, chosen_quality_index
-
-    equal_msg = None
+    global chosen_quality, chosen_quality_index, video_url
 
     chosen_quality = query.data
     for i in range(len(video.qualities)):
@@ -223,48 +197,35 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
             chosen_quality_index = i
             break
 
-    await asyncio.sleep(1)
+    download_markup = await download_markups()
+    photo = search_results[film].poster
 
     if content_type_ == 'movie':
-        equal_msg = f'📺📼 {player.post.name}- {search_results[film].info}'
-
-        await bot.edit_message_media(
-            chat_id=query.message.chat.id,
-            message_id=query.message.message_id,
-            media=types.InputMediaPhoto(
-                media=search_results[film].poster,
-                caption=f'Озвучка - {translator_name}, '
-                        f'Качество - {chosen_quality}'
-                        f'\n\n{equal_msg}'),
-            reply_markup=None
-        )
+        cpt = f'Озвучка - {translator_name}\nКачество - {chosen_quality}\n📺📼 {player.post.name} - {search_results[film].info}'
     else:
-        equal_msg = f'📺🎞 {player.post.name}- {search_results[film].info}'
+        cpt = f'Озвучка - {translator_name}\nСезон - {season_number}\nСерия {episode_number}\nКачество - {chosen_quality}\n\n📺🎞 {player.post.name} - {search_results[film].info}'
 
-        await bot.edit_message_media(
-            chat_id=query.message.chat.id,
-            message_id=query.message.message_id,
-            media=types.InputMediaPhoto(
-                media=search_results[film].poster,
-                caption=f'Озвучка - {translator_name}, '
-                        f'Сезон - {season_number}, '
-                        f'Серия {episode_number}, '
-                        f'Качество - {chosen_quality}'
-                        f'\n\n{equal_msg}'),
-            reply_markup=None
-        )
+    await bot_edit_msg(query.message, cpt, photo, download_markup)
 
-    await asyncio.sleep(1)
-    # if await search_in_archive(player.post.name):
-    #     pass
-    # else:
-    video_url = (await video[chosen_quality_index].first_url).mp4
+
+@dp.callback_query_handler(lambda query: query.data == 'download')
+async def download_callback_handler(query: types.CallbackQuery):
+    photo = search_results[film].poster
+    if content_type_ == 'movie':
+        cpt = f'Озвучка - {translator_name}, Качество - {chosen_quality}\n\n📺📼 {player.post.name} - {search_results[film].info}\n\nНачинаем скачивать!'
+    else:
+        cpt = f'Озвучка - {translator_name}\nСезон - {season_number}, Серия {episode_number}\nКачество - {chosen_quality}\n\n📺🎞 {player.post.name} - {search_results[film].info}\n\nНачинаем скачивать!'
+
+    await bot_edit_msg(query.message, cpt, photo, None)
+
+    video_url = (await video[chosen_quality_index].last_url).mp4
     seconds, width_clip, height_clip = await get_video_params(video_url)
     await send_video(video_url, seconds, width_clip, height_clip, query.message.chat.id)
 
 
-async def next_film(chat_id, message_id):
-    global film, player, page, search_results, content_type_
+async def next_film(query):
+    global film, page, search_results
+
     results = len(search_results)
 
     try:
@@ -274,54 +235,19 @@ async def next_film(chat_id, message_id):
             search_results = await Search(user_query).get_page(page)
     except:
         pass
+
     if film < results - 1:
         film += 1
 
-    player = await search_results[film].player
-
-    meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    content_type_ = meta_tag['content'].removeprefix('video.')
-
-    if content_type_ == "movie":
-        emoji = "📺📼"
-    else:
-        emoji = "📺🎞"
-    try:
-        await bot.edit_message_media(
-            chat_id=chat_id,
-            message_id=message_id,
-            media=types.InputMediaPhoto(
-                media=search_results[film].poster,
-                caption=f'{emoji} {player.post.name}- {search_results[film].info}'),
-            reply_markup=markup_main)
-    except:
-        pass
+    await scroll(query, film)
 
 
-async def back_film(chat_id, message_id):
+async def back_film(query):
     global film, player, page, search_results, content_type_
     if film > 0:
         film -= 1
 
-    player = await search_results[film].player
-
-    meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    content_type_ = meta_tag['content'].removeprefix('video.')
-
-    if content_type_ == "movie":
-        emoji = "📺📼"
-    else:
-        emoji = "📺🎞"
-    try:
-        await bot.edit_message_media(
-            chat_id=chat_id,
-            message_id=message_id,
-            media=types.InputMediaPhoto(
-                media=search_results[film].poster,
-                caption=f'{emoji} {player.post.name}- {search_results[film].info}'),
-            reply_markup=markup_main)
-    except:
-        pass
+    await scroll(query, film)
 
     if page > 1 and film == 0:
         page -= 1
@@ -331,10 +257,8 @@ async def back_film(chat_id, message_id):
 
 async def back2menu(chat_id, message_id):
     global player
-    player = await search_results[film].player
 
-    # meta_tag = player.post._soup_inst.find('meta', property='og:type')
-    # content_type_ = meta_tag['content'].removeprefix('video.')
+    player = await search_results[film].player
 
     if content_type_ == "movie":
         emoji = "📺📼"
@@ -349,7 +273,37 @@ async def back2menu(chat_id, message_id):
         reply_markup=markup_main)
 
 
-async def process_film(message):
+async def bot_edit_msg(message, cpt, photo, markup):
+    await bot.edit_message_media(
+        chat_id=message.chat.id,
+        message_id=message.message_id,
+        media=types.InputMediaPhoto(
+            media=photo,
+            caption=cpt),
+        reply_markup=markup)
+
+
+async def scroll(query, film_):
+    global content_type_, player
+
+    player = await search_results[film_].player
+    meta_tag = player.post._soup_inst.find('meta', property='og:type')
+    content_type_ = meta_tag['content'].removeprefix('video.')
+
+    txt = f'{player.post.name}- {search_results[film_].info}'
+    photo = search_results[film].poster
+
+    if content_type_ == "movie":
+        emoji = f"📺📼 {txt}"
+    else:
+        emoji = f"📺🎞 {txt}"
+    try:
+        await bot_edit_msg(query.message, emoji, photo, markup_main)
+    except:
+        pass
+
+
+async def process_film(query):
     global video, stream, choose_quality
 
     await asyncio.sleep(1)
@@ -361,49 +315,35 @@ async def process_film(message):
 
     try:
         await asyncio.sleep(1)
-        choose_quality = await choose_quality_markups()
-
         if content_type_ == "movie":
-            emoji = "📺📼"
+            emoji = f'📺📼'
         else:
-            emoji = "📺🎞"
-        await bot.edit_message_media(
-            chat_id=message.chat.id,
-            message_id=message.message_id,
-            media=types.InputMediaPhoto(
-                media=search_results[film].poster,
-                caption=f'Озвучка - {translator_name}'
-                        f'\nВыберете качество'
-                        f'\n\n {emoji} {player.post.name}- {search_results[film].info}'),
-            reply_markup=choose_quality
-        )
+            emoji = f'📺🎞'
+
+        txt = f'Озвучка - {translator_name}\nВыберете качество\n\n{emoji} {player.post.name}- {search_results[film].info}'
+        choose_quality = await choose_quality_markups()
+        photo = search_results[film].poster
+
+        await bot_edit_msg(query.message, txt, photo, choose_quality)
+
     except:
         pass
 
 
-async def process_serial(message):
-    global choose_season
-
+async def process_serial(query):
     try:
-        await asyncio.sleep(1)
+        if content_type_ == "movie":
+            emoji = f'📺📼'
+        else:
+            emoji = f'📺🎞'
+
+        txt = f'Озвучка - {translator_name}\nВыберете сезон\n\n{emoji} {player.post.name} - {search_results[film].info}'
+        photo = search_results[film].poster
         choose_season = await choose_season_markups()
 
-        if content_type_ == "movie":
-            emoji = "📺📼"
-        else:
-            emoji = "📺🎞"
-        await bot.edit_message_media(
-            chat_id=message.chat.id,
-            message_id=message.message_id,
-            media=types.InputMediaPhoto(
-                media=search_results[film].poster,
-                caption=f'Озвучка - {translator_name}\n'
-                        f'Выберете сезон'
-                        f'\n\n{emoji} {player.post.name}- {search_results[film].info}'),
-            reply_markup=choose_season
-        )
-    except:
-        pass
+        await bot_edit_msg(query.message, txt, photo, choose_season)
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 
 async def get_video_params(video_file):
@@ -450,6 +390,19 @@ async def upload_progress_callback(current, total):
     print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB at {formatted_time}")
 
 
+async def send_params(id, url, caption, attributes, progress, size):
+    await telethon_client.send_file(
+        id, url.split('/')[-1],
+        caption=caption,
+        supports_streaming=True,
+        use_cache=True,
+        part_size_kb=8192,
+        attributes=attributes,
+        progress_callback=progress,
+        file_size=size
+    )
+
+
 async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
     global const_chat_id, cap_tion
 
@@ -458,7 +411,6 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(video_url_) as response:
             if response.status == 200:
-                await bot.send_message(chat_id, 'Началась загрузка!')
                 content_length = int(response.headers.get('Content-Length', 0))
 
                 with tqdm(total=content_length, unit='B', unit_scale=True, desc=video_url_.split('/')[-1]) as pbar:
@@ -471,40 +423,25 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                             pbar.update(len(chunk))
 
                     pbar.close()
-                    await bot.send_message(chat_id, 'Загрузка завершилась, началась отправка!')
+                    await bot.send_message(chat_id, 'Скачивание завершилось, начинаю отправку!')
                     await upload_progress_callback(pbar.n, content_length)
 
                     preload_prefix_size = int(0.05 * content_length)
 
-                    if content_type_ == 'movie':
-                        cap_tion = f'📺📼 {player.post.name}- {search_results[film].info}({chosen_quality}) - {translator_name}'
-                        await telethon_client.send_file(
-                            const_chat_id, video_url_.split('/')[-1],
-                            caption=cap_tion,
-                            supports_streaming=True,
-                            use_cache=True,
-                            part_size_kb=8192,
-                            attributes=[
-                                DocumentAttributeVideo(seconds_, width_clip_, height_clip_, supports_streaming=True,
-                                                       preload_prefix_size=preload_prefix_size)],
-                            progress_callback=upload_progress_callback,
-                            file_size=content_length
-                        )
-                    else:
-                        cap_tion = f'📺🎞 {player.post.name}- {search_results[film].info}({chosen_quality})\n{translator_name}, {season_number}, {episode_number}'
+                    video_url_params = video_url_.split('/')[-1]
+                    atr = [DocumentAttributeVideo(seconds_, width_clip_, height_clip_, supports_streaming=True,
+                                                  preload_prefix_size=preload_prefix_size)]
 
-                        await telethon_client.send_file(
-                            const_chat_id, video_url_.split('/')[-1],
-                            caption=cap_tion,
-                            supports_streaming=True,
-                            use_cache=True,
-                            part_size_kb=8192,
-                            attributes=[
-                                DocumentAttributeVideo(seconds_, width_clip_, height_clip_, supports_streaming=True,
-                                                       preload_prefix_size=preload_prefix_size)],
-                            progress_callback=upload_progress_callback,
-                            file_size=content_length
-                        )
+                    if content_type_ == 'movie':
+                        cpt = (f'📺📼 {player.post.name} - {search_results[film].info}'
+                               f'({chosen_quality}) - {translator_name}')
+                        await send_params(const_chat_id, video_url_params, cpt, atr, upload_progress_callback,
+                                          content_length)
+                    else:
+                        cpt = (f'📺🎞 {player.post.name} - {search_results[film].info}({chosen_quality})\n '
+                               f'{translator_name}, {season_number}, {episode_number}')
+                        await send_params(const_chat_id, video_url_params, cpt, atr, upload_progress_callback,
+                                          content_length)
                     logging.info("Видео отправлено!")
 
                     os.remove(video_url_.split('/')[-1])
@@ -582,22 +519,31 @@ async def choose_quality_markups():
     return markup
 
 
-# async def search_in_archive(search):
-#     chid = -1002112068525
-#     meta_tag = player.post._soup_inst.find('meta', property='og:type')
-#     content_type_ = meta_tag['content'].removeprefix('video.')
-#
-#     async for message in telethon_client.iter_messages(entity=chid,search=search, limit=1000):
-#         if search in message.text:
-#             if content_type_ == "movie":
-#                 await bot.send_video(chat_id=reply_id, video=message.video.id, caption=cap_tion)
-#             else:
-#                 await bot.send_video(chat_id=reply_id, video=message.video.id, caption=cap_tion)
-#             return True
-#         else:
-#             return False
+@dp.message_handler()
+async def download_markups():
+    markup = types.InlineKeyboardMarkup()
+
+    markup.add(types.InlineKeyboardButton('Скачать', callback_data='download'))
+    markup.add(types.InlineKeyboardButton('Назад', callback_data='back2menu'))
+
+    return markup
+
+
+async def search_in_archive(search):
+    chid = -1002112068525
+    meta_tag = player.post._soup_inst.find('meta', property='og:type')
+    content_type_ = meta_tag['content'].removeprefix('video.')
+
+    async for message in telethon_client.iter_messages(entity=chid, search=search, limit=1000):
+        if search in message.text:
+            if content_type_ == "movie":
+                await bot.send_video(chat_id=reply_id, video=message.video.id, caption=cap_tion)
+            else:
+                await bot.send_video(chat_id=reply_id, video=message.video.id, caption=cap_tion)
+            return True
+        else:
+            return False
 
 
 if __name__ == '__main__':
-    print(f'Starting bot')
     executor.start_polling(dp, skip_updates=True)
