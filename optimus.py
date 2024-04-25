@@ -89,8 +89,11 @@ async def main(message: types.Message):
     var.reply_id = message.chat.id
     var.user_query = message.text
 
-    var.search_results = await Search(var.user_query).get_page(var.page)
-    var.player = await var.search_results[var.film].player
+    try:
+        var.search_results = await Search(var.user_query).get_page(var.page)
+        var.player = await var.search_results[var.film].player
+    except:
+        await message.answer("Ничего не найдено. Попробуйте еще раз.")
 
     meta_tag_ = var.player.post._soup_inst.find('meta', property='og:type')
     var.content_type_ = meta_tag_['content'].removeprefix('video.')
@@ -293,15 +296,14 @@ async def scroll(query, film_):
     meta_tag = player.post._soup_inst.find('meta', property='og:type')
     content_type_ = meta_tag['content'].removeprefix('video.')
 
-    txt = f'{player.post.name}- {var.search_results[film_].info}'
-    photo = var.search_results[film_].poster
-
     if content_type_ == "movie":
         emoji = var.emoji_f
     else:
         emoji = var.emoji_s
     try:
-        await bot_edit_msg(query.message, emoji, photo, var.markup_main)
+        txt = f'{emoji} {player.post.name}- {var.search_results[film_].info}'
+        photo = var.search_results[film_].poster
+        await bot_edit_msg(query.message, txt, photo, var.markup_main)
     except:
         pass
 
