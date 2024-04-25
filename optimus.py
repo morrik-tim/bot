@@ -2,6 +2,8 @@ import asyncio
 import datetime
 import logging
 import os
+from logging.handlers import TimedRotatingFileHandler
+
 import aiofiles
 import aiohttp
 import cv2
@@ -23,8 +25,14 @@ PHONE = os.getenv("PHONE")
 TOKEN = os.getenv("TOKEN")
 PASSWORD = os.getenv("PASSWORD")
 
-formatter = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-logging.basicConfig(filename='log_file.log', level=logging.INFO, format=formatter)
+logging.basicConfig(level=logging.INFO)
+current_date = datetime.datetime.now().strftime("%d-%m-%Y")
+log_filename = f"log_file_{current_date}.log"
+log_handler = TimedRotatingFileHandler(filename=log_filename, when='midnight', interval=1, backupCount=10)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+log_handler.setFormatter(formatter)
+logger = logging.getLogger()
+logger.addHandler(log_handler)
 
 telethon_client = TelegramClient('anon', API_ID, API_HASH)
 telethon_client.start(phone=PHONE, password=PASSWORD)
