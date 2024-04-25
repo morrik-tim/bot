@@ -100,21 +100,21 @@ async def main(message: types.Message):
     try:
         var.search_results = await Search(var.user_query).get_page(var.page)
         var.player = await var.search_results[var.film].player
+
+        meta_tag_ = var.player.post._soup_inst.find('meta', property='og:type')
+        var.content_type_ = meta_tag_['content'].removeprefix('video.')
+
+        if var.content_type_ == "movie":
+            emoji = var.emoji_f
+        else:
+            emoji = var.emoji_s
+
+        var.markup_main = await main_markups()
+        await message.answer_photo(var.search_results[var.film].poster,
+                                   caption=f'{emoji} {var.player.post.name}- {var.search_results[var.film].info}',
+                                   reply_markup=var.markup_main)
     except:
         await message.answer("Ничего не найдено. Попробуйте еще раз.")
-
-    meta_tag_ = var.player.post._soup_inst.find('meta', property='og:type')
-    var.content_type_ = meta_tag_['content'].removeprefix('video.')
-
-    if var.content_type_ == "movie":
-        emoji = var.emoji_f
-    else:
-        emoji = var.emoji_s
-
-    var.markup_main = await main_markups()
-    await message.answer_photo(var.search_results[var.film].poster,
-                               caption=f'{emoji} {var.player.post.name}- {var.search_results[var.film].info}',
-                               reply_markup=var.markup_main)
 
 
 @dp.callback_query_handler(lambda query: query.data == 'select')
