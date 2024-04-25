@@ -24,7 +24,7 @@ TOKEN = os.getenv("TOKEN")
 PASSWORD = os.getenv("PASSWORD")
 
 formatter = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-logging.basicConfig(level=logging.INFO, format=formatter)
+logging.basicConfig(filename='log_file.log', level=logging.INFO, format=formatter)
 
 telethon_client = TelegramClient('anon', API_ID, API_HASH)
 telethon_client.start(phone=PHONE, password=PASSWORD)
