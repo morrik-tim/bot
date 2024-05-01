@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import logging
 import os
-from logging.handlers import TimedRotatingFileHandler
 
 import aiofiles
 import aiohttp
@@ -10,6 +9,7 @@ import cv2
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
+from logging.handlers import RotatingFileHandler
 from aiogram.utils import executor
 from dotenv import load_dotenv, find_dotenv
 from hdrezka import Search
@@ -28,7 +28,7 @@ PASSWORD = os.getenv("PASSWORD")
 logging.basicConfig(level=logging.INFO)
 current_date = datetime.datetime.now().strftime("%d-%m-%Y")
 log_filename = f"log_file_{current_date}.log"
-log_handler = TimedRotatingFileHandler(filename=log_filename, when='midnight', interval=1, backupCount=10)
+log_handler = RotatingFileHandler(filename=log_filename, maxBytes=1024, backupCount=10)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log_handler.setFormatter(formatter)
 logger = logging.getLogger()
