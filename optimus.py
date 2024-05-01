@@ -75,6 +75,10 @@ class Variables:
         self.video = None
         self.video_url = None
 
+        self.film_name = None
+        self.film_poster = None
+        self.film_info = None
+
 
 var = Variables()
 
@@ -111,7 +115,7 @@ async def main(message: types.Message):
 
         var.markup_main = await main_markups()
         await message.answer_photo(var.search_results[var.film].poster,
-                                   caption=f'{emoji} {var.player.post.name}- {var.search_results[var.film].info}',
+                                   caption=f'{emoji} {var.player.post.name} - {var.search_results[var.film].info}',
                                    reply_markup=var.markup_main)
     except:
         await message.answer("Ничего не найдено. Попробуйте еще раз.")
@@ -124,7 +128,7 @@ async def select_callback_handler(query: types.CallbackQuery):
     else:
         emoji = var.emoji_s
 
-    txt = f'Выберите озвучку\n\n{emoji} {var.player.post.name}- {var.search_results[var.film].info}'
+    txt = f'Выберите озвучку\n\n{emoji} {var.player.post.name} - {var.search_results[var.film].info}'
     photo = var.search_results[var.film].poster
     var.choose_markup = await choose_translator_markups()
 
@@ -250,7 +254,7 @@ async def next_film(query):
     try:
         if var.film == results - 1 and results >= 36:
             var.page += 1
-            var.film = -1
+            var.film = - 1
             var.search_results = await Search(var.user_query).get_page(var.page)
     except:
         pass
@@ -285,7 +289,7 @@ async def back2menu(chat_id, message_id):
         message_id=message_id,
         media=types.InputMediaPhoto(
             media=var.search_results[var.film].poster,
-            caption=f'{emoji} {player.post.name}- {var.search_results[var.film].info}'),
+            caption=f'{emoji} {player.post.name} - {var.search_results[var.film].info}'),
         reply_markup=var.markup_main)
 
 
@@ -309,7 +313,7 @@ async def scroll(query, film_):
     else:
         emoji = var.emoji_s
     try:
-        txt = f'{emoji} {player.post.name}- {var.search_results[film_].info}'
+        txt = f'{emoji} {player.post.name} - {var.search_results[film_].info}'
         photo = var.search_results[film_].poster
         await bot_edit_msg(query.message, txt, photo, var.markup_main)
     except:
@@ -331,7 +335,7 @@ async def process_film(query):
         else:
             emoji = var.emoji_s
 
-        txt = f'Озвучка - {var.translator_name}\nВыберете качество\n\n{emoji} {var.player.post.name}- {var.search_results[var.film].info}'
+        txt = f'Озвучка - {var.translator_name}\nВыберете качество\n\n{emoji} {var.player.post.name} - {var.search_results[var.film].info}'
         choose_quality = await choose_quality_markups()
         photo = var.search_results[var.film].poster
 
@@ -361,29 +365,20 @@ async def get_video_params(video_file):
     cap = cv2.VideoCapture(video_file)
 
     if not cap.isOpened():
-        # Обработка ошибки открытия видеофайла
         print('Ошибка открытия видеофайла')
         return None, None, None
 
-    # Получение общего количества кадров и FPS
     frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = cap.get(cv2.CAP_PROP_FPS)
 
-    # Перематываем видео к началу, чтобы получить размеры кадра
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
     ret, frame = cap.read()
 
     if not ret:
-        # Обработка ошибки чтения кадра
         return None, None, None
 
-    # Получение размеров кадра
     height_clip__, width_clip__ = frame.shape[:2]
-
-    # Расчет длительности видео в секундах
     seconds__ = frames / fps
-
-    # Закрытие видеофайла
     cap.release()
 
     return seconds__, width_clip__, height_clip__
@@ -393,9 +388,7 @@ async def upload_progress_callback(current, total):
     current_mb = current / (1024 * 1024)
     total_mb = total / (1024 * 1024)
 
-    # Получаем текущее время
     now = datetime.datetime.now()
-    # Форматируем время в формат чч:мм
     formatted_time = now.strftime("%H:%M")
 
     print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB at {formatted_time}")
@@ -534,21 +527,6 @@ async def download_markups():
     markup.add(types.InlineKeyboardButton('Назад', callback_data='back2menu'))
 
     return markup
-
-
-async def search_in_archive(search):
-    meta_tag = var.player.post._soup_inst.find('meta', property='og:type')
-    content_type_ = meta_tag['content'].removeprefix('video.')
-
-    async for message in telethon_client.iter_messages(entity=var.const_chat_id, search=search, limit=1000):
-        if search in message.text:
-            if content_type_ == "movie":
-                await bot.send_video(chat_id=var.reply_id, video=message.video.id, caption=var.cpt)
-            else:
-                await bot.send_video(chat_id=var.reply_id, video=message.video.id, caption=var.cpt)
-            return True
-        else:
-            return False
 
 
 if __name__ == '__main__':
