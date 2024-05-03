@@ -51,15 +51,15 @@ class Variables:
         self.chosen_quality_index = None
         self.const_chat_id = -1002112068525
         self.content_type = None
-        self.content_type_ = None
         self.cpt = None
         self.download_markup = None
-        self.emoji_f = '📺📼'
-        self.emoji_s = '📺🎞'
+        self.emoji_f = '🎥'
+        self.emoji_s = '📺'
         self.episode_number = None
-        self.film = 0
+        self.film = None
         self.markup_main = None
-        self.page = 1
+        self.meta_tag = None
+        self.page = None
         self.player = None
         self.query = None
         self.reply_id = None
@@ -74,10 +74,6 @@ class Variables:
         self.user_query = None
         self.video = None
         self.video_url = None
-
-        self.film_name = None
-        self.film_poster = None
-        self.film_info = None
 
 
 var = Variables()
@@ -108,10 +104,9 @@ async def main(message: types.Message):
         var.search_results = await Search(var.user_query).get_page(var.page)
         var.player = await var.search_results[var.film].player
 
-        meta_tag_ = var.player.post._soup_inst.find('meta', property='og:type')
-        var.content_type_ = meta_tag_['content'].removeprefix('video.')
+        await content_type()
 
-        if var.content_type_ == "movie":
+        if var.content_type == "movie":
             emoji = var.emoji_f
         else:
             emoji = var.emoji_s
@@ -120,13 +115,14 @@ async def main(message: types.Message):
         await message.answer_photo(var.search_results[var.film].poster,
                                    caption=f'{emoji} {var.player.post.name} - {var.search_results[var.film].info}',
                                    reply_markup=var.markup_main)
-    except:
-        await message.answer("Ничего не найдено. Попробуйте еще раз.")
+    except Exception as e:
+        logger.error(e)
+        await message.answer(f'Ничего не найдено. Попробуйте еще раз.')
 
 
 @dp.callback_query_handler(lambda query: query.data == 'select')
 async def select_callback_handler(query: types.CallbackQuery):
-    if var.content_type_ == "movie":
+    if var.content_type == "movie":
         emoji = var.emoji_f
     else:
         emoji = var.emoji_s
@@ -171,7 +167,7 @@ async def translator_callback_handler(query: types.CallbackQuery):
     else:
         var.translator_id = var.player.post.translators.name_id[var.translator_name]  # id'shnik
 
-    if var.content_type_ == 'movie':
+    if var.content_type == 'movie':
         await process_film(query)
     else:
         await process_serial(query)
@@ -182,7 +178,7 @@ async def choose_season_callback_handler(query: types.CallbackQuery):
     var.season_number = int(query.data.split('_')[1])  # Получаем номер сезона из callback_data
     var.chose_episode = await choose_episode_markups()
 
-    if var.content_type_ == "movie":
+    if var.content_type == "movie":
         emoji = var.emoji_f
     else:
         emoji = var.emoji_s
@@ -201,10 +197,10 @@ async def choose_episode_callback_handler(query: types.CallbackQuery):
         stream = await var.player.get_stream(season=var.season_number, episode=var.episode_number,
                                              translator_id=var.translator_id)
         var.video = stream.video
-    except:
+    finally:
         pass
 
-    if var.content_type_ == "movie":
+    if var.content_type == "movie":
         emoji = var.emoji_f
 
     else:
@@ -230,7 +226,7 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
 
         var.download_markup = await download_markups()
 
-        if var.content_type_ == 'movie':
+        if var.content_type == 'movie':
             cpt = f'Озвучка - {var.translator_name}\nКачество - {var.chosen_quality}\n📺📼 {var.player.post.name} - {var.search_results[var.film].info}'
         else:
             cpt = f'Озвучка - {var.translator_name}\nСезон - {var.season_number}\nСерия {var.episode_number}\nКачество - {var.chosen_quality}\n\n📺🎞 {var.player.post.name} - {var.search_results[var.film].info}'
@@ -250,7 +246,7 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
 @dp.callback_query_handler(lambda query: query.data == 'download')
 async def download_callback_handler(query: types.CallbackQuery):
     photo = var.search_results[var.film].poster
-    if var.content_type_ == 'movie':
+    if var.content_type == 'movie':
         cpt = f'Озвучка - {var.translator_name}, Качество - {var.chosen_quality}\n\n{var.emoji_f} {var.player.post.name} - {var.search_results[var.film].info}\n\nНачинаем скачивать!'
     else:
         cpt = f'Озвучка - {var.translator_name}\nСезон - {var.season_number}, Серия {var.episode_number}\nКачество - {var.chosen_quality}\n\n{var.emoji_s} {var.player.post.name} - {var.search_results[var.film].info}\n\nНачинаем скачивать!'
@@ -270,14 +266,12 @@ async def next_film(query):
             var.page += 1
             var.film = - 1
             var.search_results = await Search(var.user_query).get_page(var.page)
-
-    except:
+    finally:
         pass
 
     if var.film < results - 1:
         var.film += 1
 
-    var.player = await var.search_results[var.film].player
     await scroll(query, var.film)
 
 
@@ -285,7 +279,6 @@ async def back_film(query):
     if var.film > 0:
         var.film -= 1
 
-    var.player = await var.search_results[var.film].player
     await scroll(query, var.film)
 
     if var.page > 1 and var.film == 0:
@@ -295,12 +288,13 @@ async def back_film(query):
 
 
 async def back2menu(chat_id, message_id):
-    player = await var.search_results[var.film].player
+    var.player = await var.search_results[var.film].player
 
-    if var.content_type_ == "movie":
+    if var.content_type == "movie":
         emoji = var.emoji_f
     else:
         emoji = var.emoji_s
+
     await bot.edit_message_media(
         chat_id=chat_id,
         message_id=message_id,
@@ -321,11 +315,11 @@ async def bot_edit_msg(message, cpt, photo, markup):
 
 
 async def scroll(query, film_):
-    player = await var.search_results[film_].player
-    meta_tag = var.player.post._soup_inst.find('meta', property='og:type')
-    content_type_ = meta_tag['content'].removeprefix('video.')
+    var.player = await var.search_results[film_].player
 
-    if content_type_ == "movie":
+    await content_type()
+
+    if var.content_type == "movie":
         emoji = var.emoji_f
     else:
         emoji = var.emoji_s
@@ -333,8 +327,13 @@ async def scroll(query, film_):
         txt = f'{emoji} {var.player.post.name} - {var.search_results[film_].info}'
         photo = var.search_results[film_].poster
         await bot_edit_msg(query.message, txt, photo, var.markup_main)
-    except:
-        pass
+    except Exception as e:
+        logger.error(e)
+
+
+async def content_type():
+    var.meta_tag = var.player.post._soup_inst.find('meta', property='og:type')
+    var.content_type = var.meta_tag['content'].removeprefix('video.')
 
 
 async def process_film(query):
@@ -342,12 +341,12 @@ async def process_film(query):
     try:
         stream = await var.player.get_stream(var.translator_id)
         var.video = stream.video
-    except:
+    finally:
         pass
 
     try:
         await asyncio.sleep(1)
-        if var.content_type_ == "movie":
+        if var.content_type == "movie":
             emoji = var.emoji_f
         else:
             emoji = var.emoji_s
@@ -358,13 +357,13 @@ async def process_film(query):
 
         await bot_edit_msg(query.message, txt, photo, choose_quality)
 
-    except:
+    finally:
         pass
 
 
 async def process_serial(query):
     try:
-        if var.content_type_ == "movie":
+        if var.content_type == "movie":
             emoji = var.emoji_f
         else:
             emoji = var.emoji_s
@@ -425,7 +424,6 @@ async def send_params(id, url, caption, attributes, progress, size):
 
 
 async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
-
     timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(video_url_) as response:
@@ -451,7 +449,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                     atr = [DocumentAttributeVideo(seconds_, width_clip_, height_clip_, supports_streaming=True,
                                                   preload_prefix_size=preload_prefix_size)]
 
-                    if var.content_type_ == 'movie':
+                    if var.content_type == 'movie':
                         var.cpt = (f'{var.emoji_f} {var.player.post.name} - {var.search_results[var.film].info}'
                                    f'({var.chosen_quality}) - {var.translator_name}')
                     else:
