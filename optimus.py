@@ -98,6 +98,9 @@ async def start(message: types.Message):
 
 @dp.message_handler(content_types=['text'])
 async def main(message: types.Message):
+    var.page = 1
+    var.film = 0
+
     var.reply_id = message.chat.id
     var.user_query = message.text
 
@@ -217,20 +220,31 @@ async def choose_episode_callback_handler(query: types.CallbackQuery):
 @dp.callback_query_handler(lambda query: query.data in var.video.qualities)
 async def choose_quality_callback_handler(query: types.CallbackQuery):
     var.chosen_quality = query.data
-    for i in range(len(var.video.qualities)):
-        if var.video.qualities[i] == var.chosen_quality:
-            var.chosen_quality_index = i
-            break
-
-    var.download_markup = await download_markups()
     photo = var.search_results[var.film].poster
 
-    if var.content_type_ == 'movie':
-        cpt = f'Озвучка - {var.translator_name}\nКачество - {var.chosen_quality}\n📺📼 {var.player.post.name} - {var.search_results[var.film].info}'
-    else:
-        cpt = f'Озвучка - {var.translator_name}\nСезон - {var.season_number}\nСерия {var.episode_number}\nКачество - {var.chosen_quality}\n\n📺🎞 {var.player.post.name} - {var.search_results[var.film].info}'
+    if var.chosen_quality != '2K' and var.chosen_quality != '4K':
+        for i in range(len(var.video.qualities)):
+            if var.video.qualities[i] == var.chosen_quality:
+                var.chosen_quality_index = i
+                break
 
-    await bot_edit_msg(query.message, cpt, photo, var.download_markup)
+        var.download_markup = await download_markups()
+
+        if var.content_type_ == 'movie':
+            cpt = f'Озвучка - {var.translator_name}\nКачество - {var.chosen_quality}\n📺📼 {var.player.post.name} - {var.search_results[var.film].info}'
+        else:
+            cpt = f'Озвучка - {var.translator_name}\nСезон - {var.season_number}\nСерия {var.episode_number}\nКачество - {var.chosen_quality}\n\n📺🎞 {var.player.post.name} - {var.search_results[var.film].info}'
+
+        await bot_edit_msg(query.message, cpt, photo, var.download_markup)
+
+    else:
+        cpt = f'2K и 4К не поддерживается, попробуйте другое качество'
+
+        var.choose_quality = await choose_quality_markups()
+        try:
+            await bot_edit_msg(query.message, cpt, photo, var.choose_quality)
+        finally:
+            pass
 
 
 @dp.callback_query_handler(lambda query: query.data == 'download')
