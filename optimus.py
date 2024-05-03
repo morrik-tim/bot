@@ -270,13 +270,14 @@ async def next_film(query):
             var.page += 1
             var.film = - 1
             var.search_results = await Search(var.user_query).get_page(var.page)
-            var.player = await var.search_results[var.film].player
+
     except:
         pass
 
     if var.film < results - 1:
         var.film += 1
 
+    var.player = await var.search_results[var.film].player
     await scroll(query, var.film)
 
 
@@ -305,7 +306,7 @@ async def back2menu(chat_id, message_id):
         message_id=message_id,
         media=types.InputMediaPhoto(
             media=var.search_results[var.film].poster,
-            caption=f'{emoji} {player.post.name} - {var.search_results[var.film].info}'),
+            caption=f'{emoji} {var.player.post.name} - {var.search_results[var.film].info}'),
         reply_markup=var.markup_main)
 
 
@@ -321,7 +322,7 @@ async def bot_edit_msg(message, cpt, photo, markup):
 
 async def scroll(query, film_):
     player = await var.search_results[film_].player
-    meta_tag = player.post._soup_inst.find('meta', property='og:type')
+    meta_tag = var.player.post._soup_inst.find('meta', property='og:type')
     content_type_ = meta_tag['content'].removeprefix('video.')
 
     if content_type_ == "movie":
@@ -329,7 +330,7 @@ async def scroll(query, film_):
     else:
         emoji = var.emoji_s
     try:
-        txt = f'{emoji} {player.post.name} - {var.search_results[film_].info}'
+        txt = f'{emoji} {var.player.post.name} - {var.search_results[film_].info}'
         photo = var.search_results[film_].poster
         await bot_edit_msg(query.message, txt, photo, var.markup_main)
     except:
