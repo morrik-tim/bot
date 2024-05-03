@@ -165,7 +165,7 @@ async def translator_callback_handler(query: types.CallbackQuery):
     if query.data == 'default':
         var.translator_id = None
     else:
-        var.translator_id = var.player.post.translators.name_id[var.translator_name]  # id'shnik
+        var.translator_id = var.player.post.translators.name_id[var.translator_name]
 
     if var.content_type == 'movie':
         await process_film(query)
@@ -175,7 +175,7 @@ async def translator_callback_handler(query: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda query: query.data.startswith('season_'))
 async def choose_season_callback_handler(query: types.CallbackQuery):
-    var.season_number = int(query.data.split('_')[1])  # Получаем номер сезона из callback_data
+    var.season_number = int(query.data.split('_')[1])
     var.chose_episode = await choose_episode_markups()
 
     if var.content_type == "movie":
@@ -206,7 +206,7 @@ async def choose_episode_callback_handler(query: types.CallbackQuery):
     else:
         emoji = var.emoji_s
 
-    txt = f'Озвучка - {var.translator_name}\n Сезон - {var.season_number}\nСерия {var.episode_number}\n\nВыбирите качество\n\n{emoji} {var.player.post.name} - {var.search_results[var.film].info}'
+    txt = f'Озвучка - {var.translator_name}\n Сезон - {var.season_number}\nСерия {var.episode_number}\n\nВыберите качество\n\n{emoji} {var.player.post.name} - {var.search_results[var.film].info}'
     photo = var.search_results[var.film].poster
     var.choose_quality = await choose_quality_markups()
 
@@ -351,7 +351,7 @@ async def process_film(query):
         else:
             emoji = var.emoji_s
 
-        txt = f'Озвучка - {var.translator_name}\nВыберете качество\n\n{emoji} {var.player.post.name} - {var.search_results[var.film].info}'
+        txt = f'Озвучка - {var.translator_name}\nВыберите качество\n\n{emoji} {var.player.post.name} - {var.search_results[var.film].info}'
         choose_quality = await choose_quality_markups()
         photo = var.search_results[var.film].poster
 
@@ -368,7 +368,7 @@ async def process_serial(query):
         else:
             emoji = var.emoji_s
 
-        txt = f'Озвучка - {var.translator_name}\nВыберете сезон\n\n{emoji} {var.player.post.name} - {var.search_results[var.film].info}'
+        txt = f'Озвучка - {var.translator_name}\nВыберите сезон\n\n{emoji} {var.player.post.name} - {var.search_results[var.film].info}'
         photo = var.search_results[var.film].poster
         choose_season = await choose_season_markups()
 
@@ -410,9 +410,9 @@ async def upload_progress_callback(current, total):
     print(f"Uploaded {current_mb:.2f} MB out of {total_mb:.2f} MB at {formatted_time}")
 
 
-async def send_params(id, url, caption, attributes, progress, size):
+async def send_params(url, caption, attributes, progress, size):
     await telethon_client.send_file(
-        id, url.split('/')[-1],
+        var.const_chat_id, url.split('/')[-1],
         caption=caption,
         supports_streaming=True,
         use_cache=True,
@@ -424,7 +424,7 @@ async def send_params(id, url, caption, attributes, progress, size):
 
 
 async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
-    timeout = aiohttp.ClientTimeout(total=3600)  # Установите подходящее значение таймаута
+    timeout = aiohttp.ClientTimeout(total=3600)
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.get(video_url_) as response:
             if response.status == 200:
@@ -457,7 +457,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                             f'{var.emoji_s} {var.player.post.name} - {var.search_results[var.film].info}({var.chosen_quality})\n '
                             f'{var.translator_name}, {var.season_number}, {var.episode_number}')
 
-                    await send_params(var.const_chat_id, video_url_params, var.cpt, atr, upload_progress_callback,
+                    await send_params(video_url_params, var.cpt, atr, upload_progress_callback,
                                       content_length)
 
                     logging.info("Видео отправлено!")
