@@ -285,13 +285,13 @@ async def back_film(query):
     if var.film > 0:
         var.film -= 1
 
+    var.player = await var.search_results[var.film].player
     await scroll(query, var.film)
 
     if var.page > 1 and var.film == 0:
         var.page -= 1
         var.film = 36
         var.search_results = await Search(var.user_query).get_page(var.page)
-        var.player = await var.search_results[var.film].player
 
 
 async def back2menu(chat_id, message_id):
