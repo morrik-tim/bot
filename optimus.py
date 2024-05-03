@@ -270,6 +270,7 @@ async def next_film(query):
             var.page += 1
             var.film = - 1
             var.search_results = await Search(var.user_query).get_page(var.page)
+            var.player = await var.search_results[var.film].player
     except:
         pass
 
@@ -289,6 +290,7 @@ async def back_film(query):
         var.page -= 1
         var.film = 36
         var.search_results = await Search(var.user_query).get_page(var.page)
+        var.player = await var.search_results[var.film].player
 
 
 async def back2menu(chat_id, message_id):
