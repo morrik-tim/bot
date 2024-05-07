@@ -227,9 +227,9 @@ async def choose_quality_callback_handler(query: types.CallbackQuery):
         var.download_markup = await download_markups()
 
         if var.content_type == 'movie':
-            cpt = f'Озвучка - {var.translator_name}\nКачество - {var.chosen_quality}\n📺📼 {var.player.post.name} - {var.search_results[var.film].info}'
+            cpt = f'Озвучка - {var.translator_name}\nКачество - {var.chosen_quality}\n{var.emoji_f} {var.player.post.name} - {var.search_results[var.film].info}'
         else:
-            cpt = f'Озвучка - {var.translator_name}\nСезон - {var.season_number}\nСерия {var.episode_number}\nКачество - {var.chosen_quality}\n\n📺🎞 {var.player.post.name} - {var.search_results[var.film].info}'
+            cpt = f'Озвучка - {var.translator_name}\nСезон - {var.season_number}\nСерия {var.episode_number}\nКачество - {var.chosen_quality}\n\n{var.emoji_s} {var.player.post.name} - {var.search_results[var.film].info}'
 
         await bot_edit_msg(query.message, cpt, photo, var.download_markup)
 
