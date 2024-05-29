@@ -463,7 +463,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                             f'{var.emoji_s} {var.player.post.name} - {var.search_results[var.film].info}({var.chosen_quality})\n'
                             f'{var.translator_name}, {var.season_number}, {var.episode_number}')
 
-                    caption = f'{var.cpt} : Имя - {var.user_name}, ID - {var.user_id}'
+                    caption = f'{var.cpt} : Имя - {var.user_name}, ID - @{var.user_id}'
                     await send_params(video_url_params, caption, atr, upload_progress_callback,
                                       content_length)
 
