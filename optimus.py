@@ -2,10 +2,11 @@ import asyncio
 import datetime
 import logging
 import os
-
+import fake_useragent
 import aiofiles
 import aiohttp
 import cv2
+import requests
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
@@ -24,6 +25,7 @@ API_HASH = os.getenv("API_HASH")
 PHONE = os.getenv("PHONE")
 TOKEN = os.getenv("TOKEN")
 PASSWORD = os.getenv("PASSWORD")
+LINK = os.getenv("LINK")
 
 logging.basicConfig(level=logging.INFO)
 current_date = datetime.datetime.now().strftime("%d-%m-%Y")
@@ -36,6 +38,24 @@ logger.addHandler(log_handler)
 
 telethon_client = TelegramClient('anon', API_ID, API_HASH)
 telethon_client.start(phone=PHONE, password=PASSWORD)
+
+# session = requests.Session()
+# user_ag = fake_useragent.UserAgent().random
+# data_link = {
+#     'login_name': 'morrik',
+#     'login_password': 'marat0301'
+# }
+# header = {
+#     'user-agent': user_ag
+# }
+# response = session.post(LINK, data=data_link, headers=header)
+# cookie = [
+#     {"domain": key.domain, "name": key.name, "value": key.value, "path": key}
+#     for key in session.cookies
+# ]
+# session_2 = requests.Session()
+# for cookies in cookie:
+#     session_2.cookies.set(**cookies)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
@@ -74,6 +94,8 @@ class Variables:
         self.user_query = None
         self.video = None
         self.video_url = None
+        self.user_id = None
+        self.user_name = None
 
 
 var = Variables()
@@ -99,6 +121,8 @@ async def main(message: types.Message):
 
     var.reply_id = message.chat.id
     var.user_query = message.text
+    var.user_id = message.from_user.id
+    var.user_name = message.from_user.full_name
 
     try:
         var.search_results = await Search(var.user_query).get_page(var.page)
@@ -454,10 +478,11 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                                    f'({var.chosen_quality}) - {var.translator_name}')
                     else:
                         var.cpt = (
-                            f'{var.emoji_s} {var.player.post.name} - {var.search_results[var.film].info}({var.chosen_quality})\n '
+                            f'{var.emoji_s} {var.player.post.name} - {var.search_results[var.film].info}({var.chosen_quality})\n'
                             f'{var.translator_name}, {var.season_number}, {var.episode_number}')
 
-                    await send_params(video_url_params, var.cpt, atr, upload_progress_callback,
+                    zagolovok = f'{var.cpt} : Имя - {var.user_name}, ID - {var.user_id}'
+                    await send_params(video_url_params, zagolovok, atr, upload_progress_callback,
                                       content_length)
 
                     logging.info("Видео отправлено!")
