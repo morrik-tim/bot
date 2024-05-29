@@ -103,7 +103,7 @@ async def main(message: types.Message):
 
     var.reply_id = message.chat.id
     var.user_query = message.text
-    var.user_id = message.from_user.id
+    var.user_id = message.from_user.username
     var.user_name = message.from_user.full_name
 
     try:
