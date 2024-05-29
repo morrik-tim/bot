@@ -29,8 +29,10 @@ logging.basicConfig(level=logging.INFO)
 current_date = datetime.datetime.now().strftime("%d-%m-%Y")
 log_filename = f"log_{current_date}.log"
 log_handler = TimedRotatingFileHandler(filename=log_filename, when='midnight', interval=1, backupCount=1)
+
 # formatter = logging.Formatter('%(pastime)s - %(name)s - %(levelness)s - %(message)s')
 # log_handler.setFormatter(formatter)
+
 logger = logging.getLogger()
 logger.addHandler(log_handler)
 
