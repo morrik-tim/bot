@@ -2,15 +2,13 @@ import asyncio
 import datetime
 import logging
 import os
-import fake_useragent
+from logging.handlers import TimedRotatingFileHandler
+
 import aiofiles
 import aiohttp
 import cv2
-import requests
-
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
-from logging.handlers import TimedRotatingFileHandler
 from aiogram.utils import executor
 from dotenv import load_dotenv, find_dotenv
 from hdrezka import Search
@@ -31,31 +29,13 @@ logging.basicConfig(level=logging.INFO)
 current_date = datetime.datetime.now().strftime("%d-%m-%Y")
 log_filename = f"log_file_{current_date}.log"
 log_handler = TimedRotatingFileHandler(filename=log_filename, when='midnight', interval=1, backupCount=1)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(pastime)s - %(name)s - %(levelness)s - %(message)s')
 log_handler.setFormatter(formatter)
 logger = logging.getLogger()
 logger.addHandler(log_handler)
 
 telethon_client = TelegramClient('anon', API_ID, API_HASH)
 telethon_client.start(phone=PHONE, password=PASSWORD)
-
-# session = requests.Session()
-# user_ag = fake_useragent.UserAgent().random
-# data_link = {
-#     'login_name': 'morrik',
-#     'login_password': 'marat0301'
-# }
-# header = {
-#     'user-agent': user_ag
-# }
-# response = session.post(LINK, data=data_link, headers=header)
-# cookie = [
-#     {"domain": key.domain, "name": key.name, "value": key.value, "path": key}
-#     for key in session.cookies
-# ]
-# session_2 = requests.Session()
-# for cookies in cookie:
-#     session_2.cookies.set(**cookies)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
@@ -481,8 +461,8 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                             f'{var.emoji_s} {var.player.post.name} - {var.search_results[var.film].info}({var.chosen_quality})\n'
                             f'{var.translator_name}, {var.season_number}, {var.episode_number}')
 
-                    zagolovok = f'{var.cpt} : Имя - {var.user_name}, ID - {var.user_id}'
-                    await send_params(video_url_params, zagolovok, atr, upload_progress_callback,
+                    caption = f'{var.cpt} : Имя - {var.user_name}, ID - {var.user_id}'
+                    await send_params(video_url_params, caption, atr, upload_progress_callback,
                                       content_length)
 
                     logging.info("Видео отправлено!")
