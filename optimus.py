@@ -76,8 +76,8 @@ class Variables:
         self.user_query = None
         self.video = None
         self.video_url = None
-        self.user_id = None
         self.user_name = None
+        self.user_full_name = None
 
 
 var = Variables()
@@ -103,8 +103,8 @@ async def main(message: types.Message):
 
     var.reply_id = message.chat.id
     var.user_query = message.text
-    var.user_id = message.from_user.username
-    var.user_name = message.from_user.full_name
+    var.user_name = message.from_user.username
+    var.user_full_name = message.from_user.full_name
 
     try:
         var.search_results = await Search(var.user_query).get_page(var.page)
@@ -463,7 +463,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                             f'{var.emoji_s} {var.player.post.name} - {var.search_results[var.film].info}({var.chosen_quality})\n'
                             f'{var.translator_name}, {var.season_number}, {var.episode_number}')
 
-                    caption = f'{var.cpt} : Имя - {var.user_name}, ID - @{var.user_id}'
+                    caption = f'{var.cpt} : Имя - {var.user_full_name}, USERNAME - @{var.user_name}'
                     await send_params(video_url_params, caption, atr, upload_progress_callback,
                                       content_length)
 
