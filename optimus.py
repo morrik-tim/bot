@@ -94,6 +94,7 @@ async def reply_video(message: types.Message):
 async def start(message: types.Message):
     await message.answer("Введите название фильма или сериала.")
     var.reply_id = message.chat.id
+    var.user_name = message.from_user.username
 
 
 @dp.message_handler(content_types=['text'])
@@ -463,7 +464,7 @@ async def send_video(video_url_, seconds_, width_clip_, height_clip_, chat_id):
                             f'{var.emoji_s} {var.player.post.name} - {var.search_results[var.film].info}({var.chosen_quality})\n'
                             f'{var.translator_name}, {var.season_number}, {var.episode_number}')
 
-                    caption = f'{var.cpt} : Имя - {var.user_full_name}, USERNAME - @{var.user_name}'
+                    caption = f'{var.cpt} : Имя - {var.user_full_name}; USERNAME - @{var.user_name}'
                     await send_params(video_url_params, caption, atr, upload_progress_callback,
                                       content_length)
 
